@@ -5,6 +5,12 @@ from flask import Flask, request
 
 from functools import wraps
 from flask import request, Response
+from urllib.parse import parse_qs
+
+import base64
+
+import NotesDB
+
 
 users = {}
 
@@ -14,7 +20,9 @@ def check_auth(username, password):
     """
     #TODO: proper authentication method and token generation
     if username == 'admin' and password == 'secret':
-        users["admin"] = "abcdef" # the token
+        users["admin"] = {  "token":"abcdef", # the token
+                            "notes": Notes(mongo_client["users"]["admin"])
+                         }
         return True
     return False
 
@@ -30,10 +38,12 @@ def requires_auth(f):
     def decorated(*args, **kwargs):
         token = request.args.get("auth","")
         email = request.args.get("email","")
-        print("auth attempt:", email, token)
+        print("token auth attempt:", email, token)
+        # straight through for debugging
+        return f(*args, **kwargs)
         if email in users:
             if users[email] == token:
-                return f(*args, **kwargs)
+                return f(email, *args, **kwargs)
         return authenticate()
     return decorated
 
@@ -43,44 +53,63 @@ app = Flask(__name__)
 def hello_world():
     return 'Hello World!'
 
+
 @app.route("/api/data/<note_id>/<int:version>")
-@app.route("/api/data/<note_id>", methods=['GET','POST'])
+@app.route("/api/data/<note_id>")
 @requires_auth
-def get_note(note_id, version=None):
-    if request.method == 'POST':
-        #TODO: update the specified note with new content
-        pass 
-    else:
-        #TODO: get and return the specified note
-        pass
-    return "data get endpoint"
+def get_note(user, note_id, version=None):
+    #TODO: get and return the specified note
+    x = users[user]['notes'].get_note(note_id, version)
+    return "data endpoint - get note id:%s, version:%s" % (note_id, str(version))
+
+
+@app.route("/api/data/<note_id>", methods=['POST'])
+@requires_auth
+def update_note(user, note_id):
+    #TODO: update the specified note with new content
+    return "data endpoint - update note id:%s" % (note_id)
 
 
 @app.route("/api/data", methods=['POST'])
 @requires_auth
-def create_note():
+def create_note(user):
     #TODO: create new note
-    return "data add endpoint"
+    return "data endpoint - create note"
+
+
+@app.route("/api/data/<note_id>", methods=['DELETE'])
+@requires_auth
+def delete_note(user, note_id):
+    #TODO: delete the note
+    return "data endpoint - delete note id:%s" % (note_id)
 
 
 @app.route("/api/index")
 @requires_auth
-def get_notes_list():
+def get_notes_list(user):
     #TODO: return list of notes
     # all info in the querystring
     return "data index endpoint"
 
 
-@app.route('/api/login')
-def get_auth_token():
-    email = request.args.get("email","")
-    password = request.args.get("password","")
+@app.route('/api/login', methods=['POST'])
+def login():
+    # email and password given in querystring format in post data base64 encoded
+    credentials = parse_qs(base64.decodestring(request.data).decode(encoding='UTF-8'))
 
+    print(credentials)
+    if "email" in credentials and "password" in credentials:
+        email = credentials["email"][0]
+        password = credentials["password"][0]
+    else:
+        return authenticate()
+    
     #TODO: proper authentication procedure
     if check_auth(email, password):
         return users[email] # the token
 
     return authenticate()
+
 
 
 if __name__ == '__main__':
