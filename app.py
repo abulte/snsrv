@@ -1,18 +1,17 @@
 #! /usr/bin/python
 
-from flask import Flask, request
+from flask import Flask, request, Response, jsonify
 #from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired)
 
 from functools import wraps
-from flask import request, Response
 from urllib.parse import parse_qs
 
 import base64
+from pymongo import MongoClient
 
-import NotesDB
+from notesdb import NotesDB
 
 
-users = {}
 
 def check_auth(username, password):
     """This function is called to check if a username /
@@ -21,7 +20,7 @@ def check_auth(username, password):
     #TODO: proper authentication method and token generation
     if username == 'admin' and password == 'secret':
         users["admin"] = {  "token":"abcdef", # the token
-                            "notes": Notes(mongo_client["users"]["admin"])
+                            "notesdb": NotesDB(mongo_client["notes"]["admin"]) # this is a database object containing all of 'admin's notes
                          }
         return True
     return False
@@ -40,9 +39,9 @@ def requires_auth(f):
         email = request.args.get("email","")
         print("token auth attempt:", email, token)
         # straight through for debugging
-        return f(*args, **kwargs)
+        return f(email, *args, **kwargs)
         if email in users:
-            if users[email] == token:
+            if users[email]['token'] == token:
                 return f(email, *args, **kwargs)
         return authenticate()
     return decorated
@@ -59,7 +58,12 @@ def hello_world():
 @requires_auth
 def get_note(user, note_id, version=None):
     #TODO: get and return the specified note
-    x = users[user]['notes'].get_note(note_id, version)
+    print(users[user]['notesdb'])
+    note = users[user]['notesdb'].get_note(note_id, version)
+    if note is None:
+        return Response("Note not found",404)
+
+    return jsonify(**note)
     return "data endpoint - get note id:%s, version:%s" % (note_id, str(version))
 
 
@@ -106,11 +110,19 @@ def login():
     
     #TODO: proper authentication procedure
     if check_auth(email, password):
-        return users[email] # the token
+        return users[email]['token'] # the token
 
     return authenticate()
 
 
+
+mongo_client = MongoClient()
+users = {}
+
+# debugging only
+users["admin"] = {  "token":"abcdef", # the token
+                   "notesdb": NotesDB(mongo_client["notes"]["admin"]) # this is a database object containing all of 'admin's notes
+                   }
 
 if __name__ == '__main__':
     app.run(
