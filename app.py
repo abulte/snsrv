@@ -89,7 +89,7 @@ def create_note(user):
     note = users[user]['notesdb'].create_note(data)
 
     if note is None:
-        return Response("Cannot create: unknown error",400)
+        return Response("Cannot create: unknown error",500)
 
     return jsonify(**note)
 
@@ -98,7 +98,18 @@ def create_note(user):
 @requires_auth
 def delete_note(user, note_id):
     #TODO: delete the note
-    return "data endpoint - delete note id:%s" % (note_id)
+    status = users[user]['notesdb'].delete_note(note_id)
+
+    if status == 0:
+        return ""
+    elif status == 1:
+     return Response("Error deleting: unknown error",500)
+    elif status == 2:
+     return Response("Error deleting: note not found",404)
+    elif status == 3:
+     return Response("Error deleting: must send note to trash before permanent deletion",403)
+    
+    #return "data endpoint - delete note id:%s" % (note_id)
 
 
 @app.route("/api/index")

@@ -125,6 +125,31 @@ class NotesDB():
         return note
 
 
+    def delete_note(self, note_id):
+        # permanently delete the note (and all versions) from database
+
+        note = self.get_note(note_id)
+        if not note:
+            return 2 # not found
+        if note['deleted'] != 1:
+            return 3 # not trashed yet!
+
+        print(note)
+
+        result = self.database.remove({'key': note_id})
+
+        # something failed
+        if not result['ok']:
+            return 1
+
+        # couldn't find any to delete
+        if result['n'] == 0:
+            return 2 # just in case
+
+        # otherwise, all good :)
+        return 0
+
+
     def _genkey(self):
         """Generates a unique key for a new note to go in the database"""
 
