@@ -57,28 +57,41 @@ def hello_world():
 @app.route("/api/data/<note_id>")
 @requires_auth
 def get_note(user, note_id, version=None):
-    #TODO: get and return the specified note
-    print(users[user]['notesdb'])
+    #print(users[user]['notesdb'])
     note = users[user]['notesdb'].get_note(note_id, version)
     if note is None:
-        return Response("Note not found",404)
+        return Response("Cannot get: note not found",404)
 
     return jsonify(**note)
-    return "data endpoint - get note id:%s, version:%s" % (note_id, str(version))
+    #return "data endpoint - get note id:%s, version:%s" % (note_id, str(version))
 
 
 @app.route("/api/data/<note_id>", methods=['POST'])
 @requires_auth
 def update_note(user, note_id):
-    #TODO: update the specified note with new content
-    return "data endpoint - update note id:%s" % (note_id)
+    data = request.get_data()
+    data = request.get_json(force=True)
+    note = users[user]['notesdb'].update_note(note_id, data)
+
+    if note is None:
+        return Response("Cannot update: note not found",404)
+
+    return jsonify(**note)
+    #return "data endpoint - update note id:%s" % (note_id)
 
 
 @app.route("/api/data", methods=['POST'])
 @requires_auth
 def create_note(user):
-    #TODO: create new note
-    return "data endpoint - create note"
+    data = request.get_data()
+    data = request.get_json(force=True)
+    print(data)
+    note = users[user]['notesdb'].create_note(data)
+
+    if note is None:
+        return Response("Cannot create: unknown error",400)
+
+    return jsonify(**note)
 
 
 @app.route("/api/data/<note_id>", methods=['DELETE'])
@@ -98,8 +111,10 @@ def get_notes_list(user):
 
 @app.route('/api/login', methods=['POST'])
 def login():
+
     # email and password given in querystring format in post data base64 encoded
-    credentials = parse_qs(base64.decodestring(request.data).decode(encoding='UTF-8'))
+    data = request.get_data()
+    credentials = parse_qs(base64.decodestring(data).decode(encoding='UTF-8'))
 
     print(credentials)
     if "email" in credentials and "password" in credentials:
@@ -127,6 +142,7 @@ users["admin"] = {  "token":"abcdef", # the token
 if __name__ == '__main__':
     app.run(
             #host='0.0.0.0',
+            #port=80,
             debug=True
             )
 

@@ -1,3 +1,5 @@
 *.pyc
 env
 *.swp
+__pycache__
+local
