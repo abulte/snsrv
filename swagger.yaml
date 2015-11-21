@@ -1,0 +1,292 @@
+swagger: '2.0'
+info:
+  title: SimpleNote API
+  description: Third party Simplenote API (Warning, this has been reverse engineered. May not be accurate.)
+  version: 1.0.0
+host: simplenote-appspot.com
+schemes:
+  - https
+basePath: /api
+produces:
+  - application/json
+paths:
+
+  /login:
+    post:
+      summary: login to retreive the token
+      description: |
+        the login/authenticate method. returns a token to use in future requests
+      parameters:
+        - name: data
+          in: body
+          description: base64 encoded query-style string containing `email` (username) and `password`
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: success, gives the token
+          schema:
+            type: string
+        '401': 
+          description: failed to login
+          
+  /data/{note_id}:
+    get:
+      summary: Get a note by id
+      description: |
+        Returns the full note data at the latest version.
+      parameters:
+        - name: email
+          in: query
+          description: the username (for authentication).
+          required: true
+          type: string
+          format: string
+        - name: auth
+          in: query
+          description: authentication token.
+          required: true
+          type: string
+          format: string
+        - name: note_id
+          in: path
+          description: key id of note.
+          required: true
+          type: string
+          format: string
+      responses:
+        '200':
+          description: json note data
+          schema:
+            $ref: '#/definitions/FullNote'
+        '404':
+          description: note not found error
+    post:
+      summary: update a note by id
+      description: |
+        Update a note.
+      parameters:
+        - name: email
+          in: query
+          description: the username (for authentication)
+          required: true
+          type: string
+          format: string
+        - name: auth
+          in: query
+          description: authentication token
+          required: true
+          type: string
+          format: string
+        - name: note_id
+          in: path
+          description: key id of note
+          required: true
+          type: string
+          format: string
+        - name: data
+          in: body
+          description: note data to update
+          required: true
+          schema:
+            $ref: '#/definitions/FullNote' # only updated data is needed (not all keys are needed)
+      responses:
+        '200':
+          description: json note data
+          schema:
+            $ref: '#/definitions/FullNote'
+        '404':
+          description: note not found error
+        '500': #TODO: not decided yet
+          description: failed to update note for some reason?
+    delete:
+      summary: delete a note by id
+      description: |
+        delete a note.
+      parameters:
+        - name: email
+          in: query
+          description: the username (for authentication)
+          required: true
+          type: string
+          format: string
+        - name: auth
+          in: query
+          description: authentication token
+          required: true
+          type: string
+          format: string
+        - name: note_id
+          in: path
+          description: key id of note
+          required: true
+          type: string
+          format: string
+      responses:
+        '200':
+          description: successfully deleted note
+        '403':
+          description: error deleting since wasn't previously in trashcan
+        '404': 
+          description: note didn't exist to delete
+        '500':
+          description: unknown error
+          
+  /data/{note_id}/{version}:
+    get:
+      summary: Get a note content at a certain version
+      description: |
+        Returns the note data from a version in history. (or the full note if latest version)
+      parameters:
+        - name: email
+          in: query
+          description: the username (for authentication).
+          required: true
+          type: string
+          format: string
+        - name: auth
+          in: query
+          description: authentication token.
+          required: true
+          type: string
+          format: string
+        - name: note_id
+          in: path
+          description: key id of note.
+          required: true
+          type: string
+          format: string
+        - name: version
+          in: path
+          description: version of note
+          required: true
+          type: string
+          format: string
+      responses:
+        '200':
+          description: json note data
+          schema:
+            type: object
+            properties:
+              content:
+                type: string
+              versiondate:
+                type: string
+              version:
+                type: integer
+              key:
+                type: string
+        '404':
+          description: note not found error
+
+  /data:
+    post:
+      summary: create a new note
+      description: |
+        creates a new note. only need to supply content, dates/times, and optionally tags
+      parameters:
+        - name: email
+          in: query
+          description: the username (for authentication)
+          required: true
+          type: string
+          format: string
+        - name: auth
+          in: query
+          description: authentication token
+          required: true
+          type: string
+          format: string
+        - name: data
+          in: body
+          description: note data to create
+          required: true
+          schema:
+            $ref: '#/definitions/FullNote' # only updated data is needed (not all keys are needed)
+      responses:
+        '200':
+          description: json note data
+          schema:
+            $ref: '#/definitions/FullNote'
+        '404':
+          description: note not found error
+        '500': 
+          description: failed to create note for some reason?
+  
+  /index:
+    get:
+      summary: get list of notes
+      description: |
+        returns a list of notes. many option can be specified to filter results
+      parameters:
+        - name: email
+          in: query
+          description: the username (for authentication)
+          required: true
+          type: string
+          format: string
+        - name: auth
+          in: query
+          description: authentication token
+          required: true
+          type: string
+          format: string
+        - name: length
+          in: query
+          description: todo
+          required: false
+          type: string
+          format: string
+        - name: since
+          in: query
+          description: todo
+          required: false
+          type: string
+          format: string
+        - name: mark
+          in: query
+          description: todo
+          required: false
+          type: string
+          format: string 
+          # TODO: others?
+      responses:
+        '200':
+          description: array of json note data
+          schema:
+            type: array #TODO: fix and add objects
+            items:
+              type: string
+        '500': 
+          description: unknown error? 
+          
+          
+definitions:
+  FullNote:
+    type: object
+    properties:
+        modifydate:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        deleted:
+          type: integer
+        createdate:
+          type: string
+        systemtags:
+          type: array
+          items:
+           type: string
+        content:
+          type: string
+        version:
+          type: integer
+        syncnum:
+          type: integer
+        key:
+          type: string
+        minversion:
+          type: integer
