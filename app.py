@@ -54,8 +54,8 @@ def hello_world():
     return 'Hello World!'
 
 
-@app.route("/api/data/<note_id>/<int:version>")
-@app.route("/api/data/<note_id>")
+@app.route("/api2/data/<note_id>/<int:version>")
+@app.route("/api2/data/<note_id>")
 @requires_auth
 def get_note(user, note_id, version=None):
     #print(users[user]['notesdb'])
@@ -67,7 +67,7 @@ def get_note(user, note_id, version=None):
     #return "data endpoint - get note id:%s, version:%s" % (note_id, str(version))
 
 
-@app.route("/api/data/<note_id>", methods=['POST'])
+@app.route("/api2/data/<note_id>", methods=['POST'])
 @requires_auth
 def update_note(user, note_id):
     data = request.get_data().decode(encoding='utf-8')
@@ -86,7 +86,7 @@ def update_note(user, note_id):
     #return "data endpoint - update note id:%s" % (note_id)
 
 
-@app.route("/api/data", methods=['POST'])
+@app.route("/api2/data", methods=['POST'])
 @requires_auth
 def create_note(user):
     data = request.get_data().decode(encoding='utf-8')
@@ -106,7 +106,7 @@ def create_note(user):
 
 
 
-@app.route("/api/data/<note_id>", methods=['DELETE'])
+@app.route("/api2/data/<note_id>", methods=['DELETE'])
 @requires_auth
 def delete_note(user, note_id):
     status, data = user.delete_note(note_id)
@@ -119,7 +119,7 @@ def delete_note(user, note_id):
     #return "data endpoint - delete note id:%s" % (note_id)
 
 
-@app.route("/api/index")
+@app.route("/api2/index")
 @requires_auth
 def get_notes_list(user):
 

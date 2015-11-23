@@ -71,7 +71,7 @@ class NotesDB():
         # use given modifydate if possible. 
         if 'modifydate' in data:
             t = self._verify_time(data['modifydate'])
-            if not t: return None
+            if not t: return (403, "invalid modifydate")
             note['modifydate'] = t
         else:
             note['modifydate'] = time.time()
@@ -82,7 +82,7 @@ class NotesDB():
                 note['deleted'] = int(d)
             else:
                 # invalid data, abort
-                return None
+                return (403, "invalid deleted property")
 
         if 'systemtags' in data:
             t = data['systemtags']
@@ -91,7 +91,7 @@ class NotesDB():
                 note['systemtags'] = t
             else:
                 # invalid data, abort
-                return None
+                return (403, "invalid system tags")
 
         self.database.update({'_id': note['_id']}, note)
 
@@ -99,7 +99,7 @@ class NotesDB():
             self.database.insert(old_version)
 
         note.pop('_id', None)
-        return note
+        return (200, note)
 
 
     def create_note(self, data):
@@ -201,7 +201,6 @@ class NotesDB():
                 else:
                     notes.skip(start)
             else:
-                return False
                 return (403,"invalid mark") 
 
         # limit to length

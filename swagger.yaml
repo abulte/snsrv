@@ -6,12 +6,12 @@ info:
 host: simplenote-appspot.com
 schemes:
   - https
-basePath: /api
+basePath: /
 produces:
   - application/json
 paths:
 
-  /login:
+  /api/login:
     post:
       summary: login to retreive the token
       description: |
@@ -31,7 +31,7 @@ paths:
         '401': 
           description: failed to login
           
-  /data/{note_id}:
+  /api2/data/{note_id}:
     get:
       summary: Get a note by id
       description: |
@@ -96,6 +96,8 @@ paths:
           description: json note data
           schema:
             $ref: '#/definitions/FullNote'
+        '403':
+          description: invalid data given
         '404':
           description: note not found error
         '500': #TODO: not decided yet
@@ -127,13 +129,13 @@ paths:
         '200':
           description: successfully deleted note
         '403':
-          description: error deleting since wasn't previously in trashcan
+          description: error deleting (most likely since wasn't previously in trashcan)
         '404': 
           description: note didn't exist to delete
         '500':
           description: unknown error
           
-  /data/{note_id}/{version}:
+  /api2/data/{note_id}/{version}:
     get:
       summary: Get a note content at a certain version
       description: |
@@ -180,7 +182,7 @@ paths:
         '404':
           description: note not found error
 
-  /data:
+  /api2/data:
     post:
       summary: create a new note
       description: |
@@ -209,12 +211,14 @@ paths:
           description: json note data
           schema:
             $ref: '#/definitions/FullNote'
+        '403':
+          description: invalid data given
         '404':
           description: note not found error
         '500': 
           description: failed to create note for some reason?
   
-  /index:
+  /api2/index:
     get:
       summary: get list of notes
       description: |
@@ -234,30 +238,40 @@ paths:
           format: string
         - name: length
           in: query
-          description: todo
+          description: max number of notes to return
           required: false
           type: string
           format: string
         - name: since
           in: query
-          description: todo
+          description: set earliest modification date we want
           required: false
           type: string
           format: string
         - name: mark
           in: query
-          description: todo
+          description: bookmark (in case server couldn't send all wanted notes at once). use previous mark in next index query to continue reading more notes
           required: false
           type: string
           format: string 
-          # TODO: others?
       responses:
         '200':
-          description: array of json note data
+          description: json data with an array of notes data in data and other properties toplevel
           schema:
-            type: array #TODO: fix and add objects
-            items:
-              type: string
+            type: object
+            properties:
+              data:
+                type: array # TODO: add correct note data returned
+                items:
+                  type: object
+              count:
+                type: integer
+              mark:
+                type: integer
+              time:
+                type: number
+        '403':
+          description: invalid data given
         '500': 
           description: unknown error? 
           
