@@ -4,9 +4,10 @@ from flask import Flask, request, Response, jsonify
 #from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired)
 
 from functools import wraps
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, quote, unquote
 
 import base64
+import json
 from pymongo import MongoClient
 
 from notesdb import NotesDB
@@ -37,12 +38,12 @@ def requires_auth(f):
     def decorated(*args, **kwargs):
         token = request.args.get("auth","")
         email = request.args.get("email","")
-        print("token auth attempt:", email, token)
+        #print("token auth attempt:", email, token)
         # straight through for debugging
-        return f(email, *args, **kwargs)
+        return f(users[email]['notesdb'], *args, **kwargs)
         if email in users:
             if users[email]['token'] == token:
-                return f(email, *args, **kwargs)
+                return f(users[email]['notesdb'], *args, **kwargs)
         return authenticate()
     return decorated
 
@@ -58,7 +59,7 @@ def hello_world():
 @requires_auth
 def get_note(user, note_id, version=None):
     #print(users[user]['notesdb'])
-    note = users[user]['notesdb'].get_note(note_id, version)
+    note = user.get_note(note_id, version)
     if note is None:
         return Response("Cannot get: note not found",404)
 
@@ -69,45 +70,51 @@ def get_note(user, note_id, version=None):
 @app.route("/api/data/<note_id>", methods=['POST'])
 @requires_auth
 def update_note(user, note_id):
-    data = request.get_data()
-    data = request.get_json(force=True)
-    note = users[user]['notesdb'].update_note(note_id, data)
+    data = request.get_data().decode(encoding='utf-8')
+    if data.lstrip().startswith('%7B'): # someone urlencoded the post data :(
+        data = unquote(data)
 
-    if note is None:
-        return Response("Cannot update: note not found",404)
+    data = json.loads(data)
 
-    return jsonify(**note)
+    status, data = user.update_note(note_id, data)
+
+    if status == 200:
+        if data is None:
+            return Response("Cannot update: unknown error",500)
+        return jsonify(**data)
+    return Response(data, status)
     #return "data endpoint - update note id:%s" % (note_id)
 
 
 @app.route("/api/data", methods=['POST'])
 @requires_auth
 def create_note(user):
-    data = request.get_data()
-    data = request.get_json(force=True)
-    print(data)
-    note = users[user]['notesdb'].create_note(data)
+    data = request.get_data().decode(encoding='utf-8')
+    if data.lstrip().startswith('%7B'): # someone urlencoded the post data :(
+        data = unquote(data)
 
-    if note is None:
-        return Response("Cannot create: unknown error",500)
+    data = json.loads(data)
+    #data = request.get_json(force=True)
+    #print(data)
+    status, data = user.create_note(data)
 
-    return jsonify(**note)
+    if status == 200:
+        if data is None:
+            return Response("Cannot create: unknown error",500)
+        return jsonify(**data)
+    return Response(data, status)
+
 
 
 @app.route("/api/data/<note_id>", methods=['DELETE'])
 @requires_auth
 def delete_note(user, note_id):
-    #TODO: delete the note
-    status = users[user]['notesdb'].delete_note(note_id)
+    status, data = user.delete_note(note_id)
 
-    if status == 0:
+    if status == 200:
         return ""
-    elif status == 1:
-     return Response("Error deleting: unknown error",500)
-    elif status == 2:
-     return Response("Error deleting: note not found",404)
-    elif status == 3:
-     return Response("Error deleting: must send note to trash before permanent deletion",403)
+    else:
+        return Response(data, status)
     
     #return "data endpoint - delete note id:%s" % (note_id)
 
@@ -115,9 +122,19 @@ def delete_note(user, note_id):
 @app.route("/api/index")
 @requires_auth
 def get_notes_list(user):
-    #TODO: return list of notes
+
     # all info in the querystring
-    return "data index endpoint"
+    length = request.args.get("length", None)
+    since = request.args.get("since", None)
+    mark = request.args.get("mark", None)
+
+
+    status,data = user.list_notes(length, since, mark)
+
+    if status == 200:
+        return jsonify(**data)
+    else:
+        return Response(data, status)
 
 
 @app.route('/api/login', methods=['POST'])
