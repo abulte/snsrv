@@ -1,7 +1,15 @@
 
 # simplenote_srv
 
-__attempt to create a fully featured server to implement the simplenote api (and be compatible with current unofficial simplenote clients)__
+__attempt to create a SimpleNote server clone (at least the api part)__
+
+## features
+
+- aims to be 100% compatible with simplenote api (this means you should be able to point your simplenote client to the address of this server and it will work out of the box)
+- multiuser, secure, etc...
+- scalable with mongodb, and flask structure
+
+## dependencies 
 
 The following software and libraries are used:
 
@@ -15,8 +23,8 @@ The following software and libraries are used:
 ## TODO
 
 - sanitize data on update and create
-- create proper login and token system
 - more testing!
+- find more info on api to fix any potential issues (be more compatible)
 
 ## complete note structure for reference (from simplenote.py docs)
 
@@ -38,4 +46,4 @@ The following software and libraries are used:
 ```
 
 
-Copyright © Samuel Walladge 2015
+Copyright © 2015 Samuel Walladge
