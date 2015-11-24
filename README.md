@@ -10,6 +10,7 @@ The following software and libraries are used:
 - python-pymongo
 - python-flask
 - python-urllib
+- python-bcrypt
 
 ## TODO
 

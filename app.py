@@ -1,13 +1,13 @@
 #! /usr/bin/python
 
 from flask import Flask, request, Response, jsonify
-#from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer, BadSignature, SignatureExpired)
-
 from functools import wraps
 from urllib.parse import parse_qs, quote, unquote
-
 import base64
 import json
+import bcrypt
+import random
+import uuid
 from pymongo import MongoClient
 
 from notesdb import NotesDB
@@ -16,36 +16,73 @@ from notesdb import NotesDB
 
 def check_auth(username, password):
     """This function is called to check if a username /
-    password combination is valid.
+       password combination is valid.
+       Returns True if valid, False otherwise
     """
-    #TODO: proper authentication method and token generation
-    if username == 'admin' and password == 'secret':
-        users["admin"] = {  "token":"abcdef", # the token
-                            "notesdb": NotesDB(mongo_client["notes"]["admin"]) # this is a database object containing all of 'admin's notes
-                         }
+
+    users_db = main_database['users']
+
+    user = users_db.find_one({'username': username})
+    if not user:
+        return False # username doesn't exist
+
+    print("user %s ok" % (username))
+    print(user)
+
+    # check if equal to password in database
+    if bcrypt.hashpw(password.encode(), user['hashed']) == user['hashed']:
         return True
+
     return False
 
-def authenticate():
-    """Sends a 401 response that enables basic auth"""
-    return Response(
-    'Could not verify your access level for that URL.\n'
-    'You have to login with proper credentials', 401,
-    {'WWW-Authenticate': 'Basic realm="Login Required"'})
+
+def get_token(username):
+    """ returns a valid token for the given user (generates new one if needed)
+        currently doesn't validate user - expected to be protected by check_auth function
+    """
+
+    db = main_database['users']
+    user = db.find_one({'username': username})
+
+    if user.get('tokenisvalid', False):
+        # token is valid, return it
+        return user['token']
+    else:
+        # else generate new one
+        token = (str(uuid.uuid4())+str(uuid.uuid4())).replace('-','').upper()
+
+        user['token'] = token
+        user['tokenisvalid'] = True
+        db.update({'_id': user['_id']}, user)
+
+        return token
+
+
+
 
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.args.get("auth","")
-        email = request.args.get("email","")
-        #print("token auth attempt:", email, token)
-        # straight through for debugging
-        return f(users[email]['notesdb'], *args, **kwargs)
-        if email in users:
-            if users[email]['token'] == token:
-                return f(users[email]['notesdb'], *args, **kwargs)
-        return authenticate()
+        token = request.args.get("auth",None)
+        email = request.args.get("email",None)
+
+        # check for existance
+        if email is None or token is None:
+            return Response("invalid or missing credentials", 401)
+
+        # check for user existance
+        user = main_database['users'].find_one({'username': email})
+        if not user:
+            return Response("invalid or missing credentials", 401)
+
+        # check token valid. TODO: token expire time
+        if user['token'] == token and user.get('tokenisvalid', False):
+            return f(NotesDB(main_database['notes'][email]), *args, **kwargs)
+
+        return Response("invalid credentials", 401)
+
     return decorated
+
 
 app = Flask(__name__)
 
@@ -149,23 +186,22 @@ def login():
         email = credentials["email"][0]
         password = credentials["password"][0]
     else:
-        return authenticate()
+        return Response("invalid or missing credentials", 401)
     
-    #TODO: proper authentication procedure
     if check_auth(email, password):
-        return users[email]['token'] # the token
+        return get_token(email) # note this function not secured due to check_auth protecting it
 
-    return authenticate()
+    return Response("invalid credentials", 401)
 
 
 
 mongo_client = MongoClient()
-users = {}
+main_database = mongo_client['simplenote1']
 
-# debugging only
-users["admin"] = {  "token":"abcdef", # the token
-                   "notesdb": NotesDB(mongo_client["notes"]["admin"]) # this is a database object containing all of 'admin's notes
-                   }
+class User():
+    def __init__(self, name):
+        self.name = name
+
 
 if __name__ == '__main__':
     app.run(
