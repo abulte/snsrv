@@ -39,6 +39,9 @@ Currently tested like this:
 At the moment the server needs to be thoroughly tested for compatibility, stability, and security, so contributions of any kind are welcome!
 Feel free to submit a pull request or raise an issue. :)
 
+## documentation
+
+See `swagger.yaml` for the api documentation - can be viewed using a [swagger](http://swagger.io/) ui.
 
 ## License
 
