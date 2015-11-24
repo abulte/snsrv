@@ -26,9 +26,6 @@ def check_auth(username, password):
     if not user:
         return False # username doesn't exist
 
-    print("user %s ok" % (username))
-    print(user)
-
     # check if equal to password in database
     if bcrypt.hashpw(password.encode(), user['hashed']) == user['hashed']:
         return True
@@ -64,20 +61,26 @@ def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = request.args.get("auth",None)
-        email = request.args.get("email",None)
+        username = request.args.get("email",None)
 
         # check for existance
-        if email is None or token is None:
+        if username is None or token is None:
             return Response("invalid or missing credentials", 401)
 
         # check for user existance
-        user = main_database['users'].find_one({'username': email})
+        user = main_database['users'].find_one({'username': username})
         if not user:
             return Response("invalid or missing credentials", 401)
 
         # check token valid. TODO: token expire time
         if user['token'] == token and user.get('tokenisvalid', False):
-            return f(NotesDB(main_database['notes'][email]), *args, **kwargs)
+            # caching to avoid creating the notesdb class every time
+            if username in users_cache:
+                db = users_cache[username]
+            else:
+                db = NotesDB(main_database['notes'][username])
+                users_cache[username] = db
+            return f(db, *args, **kwargs)
 
         return Response("invalid credentials", 401)
 
@@ -95,7 +98,6 @@ def hello_world():
 @app.route("/api2/data/<note_id>")
 @requires_auth
 def get_note(user, note_id, version=None):
-    #print(users[user]['notesdb'])
     note = user.get_note(note_id, version)
     if note is None:
         return Response("Cannot get: note not found",404)
@@ -131,8 +133,6 @@ def create_note(user):
         data = unquote(data)
 
     data = json.loads(data)
-    #data = request.get_json(force=True)
-    #print(data)
     status, data = user.create_note(data)
 
     if status == 200:
@@ -181,7 +181,6 @@ def login():
     data = request.get_data()
     credentials = parse_qs(base64.decodestring(data).decode(encoding='UTF-8'))
 
-    print(credentials)
     if "email" in credentials and "password" in credentials:
         email = credentials["email"][0]
         password = credentials["password"][0]
@@ -197,6 +196,7 @@ def login():
 
 mongo_client = MongoClient()
 main_database = mongo_client['simplenote1']
+users_cache = {}
 
 class User():
     def __init__(self, name):
