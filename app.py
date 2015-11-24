@@ -1,5 +1,10 @@
 #! /usr/bin/python
 
+# Copyright (c) 2015 Samuel Walladge
+# Distributed under the terms of the GNU General Public License version 3.
+
+
+import os
 from flask import Flask, request, Response, jsonify
 from functools import wraps
 from urllib.parse import parse_qs, quote, unquote
@@ -20,7 +25,7 @@ def check_auth(username, password):
        Returns True if valid, False otherwise
     """
 
-    users_db = main_database['users']
+    users_db = app.config.get('database')['users']
 
     user = users_db.find_one({'username': username})
     if not user:
@@ -38,7 +43,7 @@ def get_token(username):
         currently doesn't validate user - expected to be protected by check_auth function
     """
 
-    db = main_database['users']
+    db = app.config.get('database')['users']
     user = db.find_one({'username': username})
 
     if user.get('tokenisvalid', False):
@@ -68,17 +73,18 @@ def requires_auth(f):
             return Response("invalid or missing credentials", 401)
 
         # check for user existance
-        user = main_database['users'].find_one({'username': username})
+        user = app.config.get('database')['users'].find_one({'username': username})
         if not user:
             return Response("invalid or missing credentials", 401)
 
         # check token valid. TODO: token expire time
         if user['token'] == token and user.get('tokenisvalid', False):
             # caching to avoid creating the notesdb class every time
+            users_cache = app.config.get('users_cache')
             if username in users_cache:
                 db = users_cache[username]
             else:
-                db = NotesDB(main_database['notes'][username])
+                db = NotesDB(app.config.get('database')['notes'][username])
                 users_cache[username] = db
             return f(db, *args, **kwargs)
 
@@ -88,10 +94,6 @@ def requires_auth(f):
 
 
 app = Flask(__name__)
-
-@app.route('/')
-def hello_world():
-    return 'Hello World!'
 
 
 @app.route("/api2/data/<note_id>/<int:version>")
@@ -193,21 +195,20 @@ def login():
     return Response("invalid credentials", 401)
 
 
-
-mongo_client = MongoClient()
-main_database = mongo_client['simplenote1']
-users_cache = {}
-
-class User():
-    def __init__(self, name):
-        self.name = name
-
-
 if __name__ == '__main__':
+    app.config.from_object('config')
+
+    if os.environ.get('FLASK_SIMPLENOTE_SRV'):
+        app.config.from_envvar('FLASK_SIMPLENOTE_SRV')
+
+    mongo_client = MongoClient(app.config.get('MONGO_HOST'), app.config.get('MONGO_PORT'))
+    app.config['mongo_client'] = mongo_client
+    app.config['database'] = mongo_client[app.config.get('DATABASE_ROOT_NAME')]
+    app.config['users_cache'] = {}
+
     app.run(
-            #host='0.0.0.0',
-            #port=80,
-            debug=True
+            host=app.config.get('SERVER_BIND'),
+            port=app.config.get('SERVER_PORT')
             )
 
 

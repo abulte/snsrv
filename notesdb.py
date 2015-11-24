@@ -1,4 +1,6 @@
 
+# Copyright (c) 2015 Samuel Walladge
+# Distributed under the terms of the GNU General Public License version 3.
 
 import uuid
 import time
