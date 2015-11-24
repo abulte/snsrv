@@ -1,9 +1,9 @@
 swagger: '2.0'
 info:
-  title: SimpleNote API
-  description: Third party Simplenote API (Warning, this has been reverse engineered. May not be accurate.)
-  version: 1.0.0
-host: simplenote-appspot.com
+  title: snsrv api
+  description: http api for snsrv (Warning, this may not be totally accurate yet - in development.)
+  version: 0.0.1
+host: localhost
 schemes:
   - https
 basePath: /
