@@ -1,20 +1,17 @@
 swagger: '2.0'
 info:
   title: snsrv api
-  description: http api for snsrv (Warning, this may not be totally accurate yet - in development.)
-  version: 0.0.1
+  description: 'HTTP API for snsrv (Warning, this may not be totally accurate yet - in development.)'
+  version: 0.0.2
 host: localhost
-schemes:
-  - https
 basePath: /
-produces:
-  - application/json
 paths:
-
   /api/login:
     post:
+      tags:
+        - authentication
       summary: login to retreive the token
-      description: |
+      description: >
         the login/authenticate method. returns a token to use in future requests
       parameters:
         - name: data
@@ -25,14 +22,15 @@ paths:
             type: string
       responses:
         '200':
-          description: success, gives the token
+          description: 'success, gives the token'
           schema:
             type: string
-        '401': 
+        '401':
           description: failed to login
-          
-  /api2/data/{note_id}:
+  '/api2/data/{note_id}':
     get:
+      tags:
+        - data
       summary: Get a note by id
       description: |
         Returns the full note data at the latest version.
@@ -63,6 +61,8 @@ paths:
         '404':
           description: note not found error
     post:
+      tags:
+        - data
       summary: update a note by id
       description: |
         Update a note.
@@ -90,7 +90,7 @@ paths:
           description: note data to update
           required: true
           schema:
-            $ref: '#/definitions/FullNote' # only updated data is needed (not all keys are needed)
+            $ref: '#/definitions/FullNote'
       responses:
         '200':
           description: json note data
@@ -100,9 +100,11 @@ paths:
           description: invalid data given
         '404':
           description: note not found error
-        '500': #TODO: not decided yet
+        '500':
           description: failed to update note for some reason?
     delete:
+      tags:
+        - data
       summary: delete a note by id
       description: |
         delete a note.
@@ -129,17 +131,19 @@ paths:
         '200':
           description: successfully deleted note
         '403':
-          description: error deleting (most likely since wasn't previously in trashcan)
-        '404': 
-          description: note didn't exist to delete
+          description: "error deleting (most likely since wasn't previously in trashcan)"
+        '404':
+          description: "note didn't exist to delete"
         '500':
           description: unknown error
-          
-  /api2/data/{note_id}/{version}:
+  '/api2/data/{note_id}/{version}':
     get:
+      tags:
+        - data
       summary: Get a note content at a certain version
-      description: |
-        Returns the note data from a version in history. (or the full note if latest version)
+      description: >
+        Returns the note data from a version in history. (or the full note if
+        latest version)
       parameters:
         - name: email
           in: query
@@ -181,12 +185,14 @@ paths:
                 type: string
         '404':
           description: note not found error
-
   /api2/data:
     post:
+      tags:
+        - data
       summary: create a new note
-      description: |
-        creates a new note. only need to supply content, dates/times, and optionally tags
+      description: >
+        creates a new note. only need to supply content, dates/times, and
+        optionally tags
       parameters:
         - name: email
           in: query
@@ -205,7 +211,7 @@ paths:
           description: note data to create
           required: true
           schema:
-            $ref: '#/definitions/FullNote' # only updated data is needed (not all keys are needed)
+            $ref: '#/definitions/FullNote'
       responses:
         '200':
           description: json note data
@@ -215,11 +221,12 @@ paths:
           description: invalid data given
         '404':
           description: note not found error
-        '500': 
+        '500':
           description: failed to create note for some reason?
-  
   /api2/index:
     get:
+      tags:
+        - index
       summary: get list of notes
       description: |
         returns a list of notes. many option can be specified to filter results
@@ -250,10 +257,10 @@ paths:
           format: string
         - name: mark
           in: query
-          description: bookmark (in case server couldn't send all wanted notes at once). use previous mark in next index query to continue reading more notes
+          description: "bookmark (in case server couldn't send all wanted notes at once). use previous mark in next index query to continue reading more notes"
           required: false
           type: string
-          format: string 
+          format: string
       responses:
         '200':
           description: json data with an array of notes data in data and other properties toplevel
@@ -261,7 +268,7 @@ paths:
             type: object
             properties:
               data:
-                type: array # TODO: add correct note data returned
+                type: array
                 items:
                   type: object
               count:
@@ -272,35 +279,33 @@ paths:
                 type: number
         '403':
           description: invalid data given
-        '500': 
-          description: unknown error? 
-          
-          
+        '500':
+          description: unknown error?
 definitions:
   FullNote:
     type: object
     properties:
-        modifydate:
+      modifydate:
+        type: string
+      tags:
+        type: array
+        items:
           type: string
-        tags:
-          type: array
-          items:
-            type: string
-        deleted:
-          type: integer
-        createdate:
+      deleted:
+        type: integer
+      createdate:
+        type: string
+      systemtags:
+        type: array
+        items:
           type: string
-        systemtags:
-          type: array
-          items:
-           type: string
-        content:
-          type: string
-        version:
-          type: integer
-        syncnum:
-          type: integer
-        key:
-          type: string
-        minversion:
-          type: integer
+      content:
+        type: string
+      version:
+        type: integer
+      syncnum:
+        type: integer
+      key:
+        type: string
+      minversion:
+        type: integer
