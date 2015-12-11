@@ -28,6 +28,8 @@ class NotesDB():
 
         if not note:
             return None
+
+        # remove the _id field
         note.pop('_id', None)
         return note
 
@@ -52,12 +54,13 @@ class NotesDB():
         # increment version
         note['syncnum'] = note['syncnum'] + 1
 
-        # update content and tags. TODO: sanitize/verify all data
+        # update content 
         if 'content' in data:
             cont = str(data['content'])
 
             if note['content'] != cont: # ie changed data
 
+                # need to keep old version of content in this case
                 old_version['content'] = note['content']
                 old_version['versiondate'] = note['modifydate']
                 old_version['version'] = note['version']
@@ -67,6 +70,7 @@ class NotesDB():
                 note['content'] = cont
                 note['version'] = note['version'] + 1 # inc version since new content
 
+        # update tags
         if 'tags' in data:
             note['tags'] = [str(t) for t in data['tags']]
 
@@ -78,6 +82,7 @@ class NotesDB():
         else:
             note['modifydate'] = time.time()
 
+        # maybe note needs to be deleted?
         if 'deleted' in data:
             d = str(data['deleted'])
             if d == "0" or d == "1":
@@ -86,20 +91,21 @@ class NotesDB():
                 # invalid data, abort
                 return (403, "invalid deleted property")
 
+        # update the system tags - TODO: what other systemtags are there?
         if 'systemtags' in data:
             t = data['systemtags']
-            # TODO: better verification, does simplenote support more systemtags?
-            if t == ['markdown'] or t == []:
-                note['systemtags'] = t
-            else:
-                # invalid data, abort
-                return (403, "invalid system tags")
+            new_tags = []
+            if 'markdown' in t:
+                new_tags.append('markdown')
+            note['systemtags'] = new_tags
 
-        self.database.update({'_id': note['_id']}, note)
+        # now actually update the database
+        self.database.replace_one({'_id': note['_id']}, note)
 
         if new_version:
-            self.database.insert(old_version)
+            self.database.insert_one(old_version)
 
+        # remove the _id field
         note.pop('_id', None)
         return (200, note)
 
@@ -110,16 +116,16 @@ class NotesDB():
         note = {}
 
         key = self._genkey()
-
         note['key'] = key
 
-        #TODO: sanitize all data
         if 'content' in data:
-            note['content'] = data['content']
+            note['content'] = str(data['content'])
         else:
             note['content'] = ''
+
         if 'tags' in data:
-            note['tags'] = data['tags']
+            if not isinstance(data['tags'],list): return (403, "invalid tag data")
+            note['tags'] = [str(t) for t in data['tags']]
         else:
             note['tags'] = []
 
@@ -143,8 +149,8 @@ class NotesDB():
         note['systemtags'] = []
         note['syncnum'] = 1
 
-        self.database.insert(note)
-        note.pop('_id', None)
+        self.database.insert_one(note)
+
         return (200, note)
 
 
@@ -157,20 +163,15 @@ class NotesDB():
         if note['deleted'] != 1:
             return (403, "send to trash before deleting") # not trashed yet!
 
-        print(note)
+        result = self.database.delete_one({'key': note_id})
 
-        result = self.database.remove({'key': note_id})
-
-        # something failed
-        if not result['ok']:
-            return (500, "unknown error")
-
-        # couldn't find any to delete
-        if result['n'] == 0:
+        # none deleted
+        if result.deleted_count == 0:
             return (404, "note not found") # not found
 
         # otherwise, all good :)
         return (200, "")
+
 
     def list_notes(self, length=None, since=None, mark=None):
         """return (status, data) where data is list of notes that fit criteria if status ok, or error string if not ok """

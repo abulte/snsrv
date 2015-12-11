@@ -230,9 +230,10 @@ def get_notes_list(user):
 @crossdomain(origin='*')
 def login():
 
-    # email and password given in querystring format in post data base64 encoded
+    # email and password given in querystring format in post data urlencoded then base64 encoded
     data = request.get_data()
-    credentials = parse_qs(base64.decodestring(data).decode(encoding='UTF-8'))
+    credentials = parse_qs(unquote(base64.decodestring(data).decode(encoding='UTF-8')))
+    print(credentials)
 
     if "email" in credentials and "password" in credentials:
         email = credentials["email"][0]
@@ -259,8 +260,7 @@ if __name__ == '__main__':
 
     app.run(
             host=app.config.get('SERVER_BIND'),
-            port=app.config.get('SERVER_PORT')
+            port=app.config.get('SERVER_PORT'),
+           # ssl_context = ... better to run this under another web server (eg. nginx or apache) instead of this dev server
+            debug = True
             )
-
-
-
