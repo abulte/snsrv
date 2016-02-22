@@ -262,10 +262,10 @@ def login():
 
 @app.route('/')
 def web_index():
+    loggedin = False
     if 'username' in session:
-        # user is logged in, TODO render template for index page
-        return 'Logged in as %s' % escape(session['username'])
-    return redirect('/login')
+        loggedin = True
+    return render_template('index.html', username=session.get('username', None), loggedin=loggedin)
 
 @app.route('/login', methods=['GET', 'POST'])
 def web_login():
@@ -278,7 +278,6 @@ def web_login():
         session['username'] = request.form['username']
         return redirect(url_for('web_index'))
 
-    # TODO: render template for login page
     if 'username' in session:
         flash("You are logged in!")
         return redirect(url_for('web_index'))
@@ -288,7 +287,8 @@ def web_login():
 @app.route('/logout')
 def web_logout():
     # remove the username from the session if it's there
-    session.pop('username', None)
+    if session.pop('username', None):
+        flash("You have been logged out.")
     return redirect(url_for('web_index'))
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -303,7 +303,7 @@ def web_register():
             <form action="" method="post">
                 <p>Username <input type=text name=username>
                 <p>Password <input type=password name=password>
-                <p><input type=submit value=Login>
+                <p><input type=submit value=Register>
             </form>
             '''
     return '''
@@ -311,7 +311,7 @@ def web_register():
         <form action="" method="post">
             <p>Username <input type=text name=username>
             <p>Password <input type=password name=password>
-            <p><input type=submit value=Login>
+            <p><input type=submit value=Register>
         </form>
         '''
 
