@@ -5,7 +5,9 @@
 
 
 import os
-from flask import Flask, request, Response, jsonify, session, redirect, url_for, render_template, escape
+from flask import Flask, request, Response, jsonify, \
+        session, redirect, url_for, render_template, escape, \
+        flash
 from functools import wraps
 from urllib.parse import parse_qs, quote, unquote
 import base64
@@ -270,22 +272,18 @@ def web_login():
     if request.method == 'POST':
         username = request.form['username']
         if not check_auth(username, request.form['password']):
-            # TODO: invalid credentials, return login page with message
-            return "fail"
+            return render_template('login.html', error='Invalid credentials') 
 
         # ok, we're authed, lets set username session
         session['username'] = request.form['username']
         return redirect(url_for('web_index'))
 
     # TODO: render template for login page
-    return '''
-        Login
-        <form action="" method="post">
-            <p>Username <input type=text name=username>
-            <p>Password <input type=password name=password>
-            <p><input type=submit value=Login>
-        </form>
-    '''
+    if 'username' in session:
+        flash("You are logged in!")
+        return redirect(url_for('web_index'))
+    return render_template('login.html', error=None) 
+
 
 @app.route('/logout')
 def web_logout():
