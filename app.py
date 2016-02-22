@@ -84,6 +84,7 @@ def check_auth(username, password):
 
 def create_user(username, password):
     """ function to create a new user in the db - should also check for errors"""
+    # TODO: verify here, or in server part? use flashing (http://flask.pocoo.org/docs/0.10/patterns/flashing/#message-flashing-pattern) to show login/register/etc errors
     if not username or not password:
         return False
 
