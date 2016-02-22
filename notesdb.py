@@ -97,6 +97,8 @@ class NotesDB():
             new_tags = []
             if 'markdown' in t:
                 new_tags.append('markdown')
+            if 'pinned' in t:
+                new_tags.append('pinned')
             note['systemtags'] = new_tags
 
         # now actually update the database
