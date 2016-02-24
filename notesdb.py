@@ -236,7 +236,6 @@ class NotesDB():
 
         while True:
             key = str(uuid.uuid4())
-            print(key)
             if not self.database.find_one({'key': key}):
                 return key
 

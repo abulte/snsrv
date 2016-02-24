@@ -241,12 +241,11 @@ def login():
 
     # email and password given in querystring format in post data urlencoded then base64 encoded
     data = request.get_data()
-    credentials = parse_qs(unquote(base64.decodestring(data).decode(encoding='UTF-8')))
-    print(credentials)
+    credentials = parse_qs(base64.decodestring(data).decode(encoding='UTF-8'))
 
     if "email" in credentials and "password" in credentials:
-        email = credentials["email"][0]
-        password = credentials["password"][0]
+        email = unquote(credentials["email"][0])
+        password = unquote(credentials["password"][0])
     else:
         return Response("invalid or missing credentials", 401)
     
