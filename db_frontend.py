@@ -27,6 +27,10 @@ class Database():
             return None
         return note
 
+    def update_note(self, userid, noteid, data):
+        #TODO: check note exists, user can access, do stuff for data verification
+        self.database.update_note(noteid, data)
+
 
 
     

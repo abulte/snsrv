@@ -18,6 +18,9 @@ class DB(object):
     def get_note(self, key, version=None):
         raise NotImplemented()
 
+    def update_note(self, key, data):
+        raise NotImplemented()
+
 
 class Database(DB):
     def __init__(self, args):
@@ -45,4 +48,8 @@ class Database(DB):
             note['content'] = old_content['content']
         return note
 
+
+    def update_note(self, key, data):
+        self.cur.execute("update notes set deleted=:deleted, modifydate=:modifydate, syncnum=:syncnum, minversion=:minversion, publishkey=:publishkey, content=:content  where key = ?", key, **data)
+        #TODO: handle tags (here or higher up?)
 

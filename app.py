@@ -169,15 +169,16 @@ def get_note(userid, note_id, version=None):
 @app.route("/api2/data/<note_id>", methods=['POST'])
 @crossdomain(origin='*')
 @requires_auth
-def update_note(user, note_id):
+def update_note(userid, note_id):
     # TODO: update database (ongoing) - up to here
     data = request.get_data().decode(encoding='utf-8')
+    # not sure if need this
     if data.lstrip().startswith('%7B'): # someone urlencoded the post data :(
         data = unquote(data)
 
     data = json.loads(data)
 
-    status, data = user.update_note(note_id, data)
+    status, data = db.update_note(userid, note_id, data)
 
     if status == 200:
         if data is None:
