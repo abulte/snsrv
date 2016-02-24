@@ -13,7 +13,7 @@ SERVER_PORT = 5000
 # WARNING: change to False in production servers
 DEBUG = True
 
-SECRET = 'nothing'
+SECRET_KEY = 'nothing'
 
 
 # the mongodb database name to use

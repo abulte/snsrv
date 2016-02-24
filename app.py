@@ -5,7 +5,9 @@
 
 
 import os
-from flask import Flask, request, Response, jsonify
+from flask import Flask, request, Response, jsonify, \
+        session, redirect, url_for, render_template, escape, \
+        flash
 from functools import wraps
 from urllib.parse import parse_qs, quote, unquote
 import base64
@@ -82,6 +84,18 @@ def check_auth(username, password):
 
     return False
 
+def create_user(username, password):
+    """ function to create a new user in the db - should also check for errors"""
+    # TODO: verify here, or in server part? use flashing (http://flask.pocoo.org/docs/0.10/patterns/flashing/#message-flashing-pattern) to show login/register/etc errors
+    if not username or not password:
+        return False
+
+    users_db = app.config.get('database')['users']
+    if len(username) < 30 and len(username) > 0 and not users_db.find_one({'username': username}):
+        users_db.insert({'username': username, 'hashed': bcrypt.hashpw(password.encode(), bcrypt.gensalt())})
+        return True
+
+    return False
 
 def get_token(username):
     """ returns a valid token for the given user (generates new one if needed)
@@ -245,6 +259,61 @@ def login():
 
     return Response("invalid credentials", 401)
 
+@app.route('/')
+def web_index():
+    loggedin = False
+    if 'username' in session:
+        loggedin = True
+    return render_template('index.html', username=session.get('username', None), loggedin=loggedin)
+
+@app.route('/login', methods=['GET', 'POST'])
+def web_login():
+    if request.method == 'POST':
+        username = request.form['username']
+        if not check_auth(username, request.form['password']):
+            return render_template('login.html', error='Invalid credentials') 
+
+        # ok, we're authed, lets set username session
+        session['username'] = request.form['username']
+        return redirect(url_for('web_index'))
+
+    if 'username' in session:
+        flash("You are logged in!")
+        return redirect(url_for('web_index'))
+    return render_template('login.html', error=None) 
+
+
+@app.route('/logout')
+def web_logout():
+    # remove the username from the session if it's there
+    if session.pop('username', None):
+        flash("You have been logged out.")
+    return redirect(url_for('web_index'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def web_register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        if create_user(username, password):
+            return redirect('/login')
+        return '''
+            Register again (failed)
+            <form action="" method="post">
+                <p>Username <input type=text name=username>
+                <p>Password <input type=password name=password>
+                <p><input type=submit value=Register>
+            </form>
+            '''
+    return '''
+        Register
+        <form action="" method="post">
+            <p>Username <input type=text name=username>
+            <p>Password <input type=password name=password>
+            <p><input type=submit value=Register>
+        </form>
+        '''
+
 
 if __name__ == '__main__':
     app.config.from_object('config')
@@ -256,6 +325,7 @@ if __name__ == '__main__':
     app.config['mongo_client'] = mongo_client
     app.config['database'] = mongo_client[app.config.get('DATABASE_ROOT_NAME')]
     app.config['users_cache'] = {}
+    app.secret_key = app.config.get('SECRET_KEY')
 
     app.run(
             host=app.config.get('SERVER_BIND'),
