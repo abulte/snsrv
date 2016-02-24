@@ -1,30 +1,49 @@
 
 # snsrv
 
-__attempt to create a [Simplenote](http://simplenote.com/) server clone (at least the api part)__
+An attempt to create a [Simplenote](http://simplenote.com/) compatible api and self hosted notes server.
+
+## WARNING
+
+This is currently under heavy development and is likely to be not working at all in its current state. (working on database backends right now)
+
 
 ## features
 
-- aims to be 100% compatible with the simplenote api (this means you should be able to point your simplenote client to the address of this server and it will work out of the box)
+- aims to be 100% compatible with the simplenote third party api (this means you should be able to point your simplenote client to the address of this server and it will work out of the box)
 - multiuser, secure, etc...
-- scalable with mongodb, and flask structure
+- scalable with mongodb (maybe - at least sqlite3, but ability to add more db backends), and flask structure
 
 ## dependencies 
 
 The following software and libraries are used:
 
 - python3
-- mongodb
-- python-pymongo
 - python-flask
 - python-urllib
 - python-bcrypt
+- python-jinja
 
-## TODO
+(optional - for sqlite backend)
 
-- sanitize data on update and create
-- more testing!
-- find more info on api to fix any potential issues (be more compatible)
+- python-sqlite
+
+
+(optional - for mongodb backend) 
+
+- python-pymongo
+- mongodb
+
+
+## TODO/ROADMAP
+
+- [INPROGRESS] complete and stabilize a database backend
+- [TODO] sanitize data on update and create, etc.
+- [TODO] implement complete api (aiming for simplenote api v2.1.3)
+- [TODO] more testing of api!
+- [TODO] document the api
+- [TODO] web interface for managing users
+- [TODO] full web interface for interacting with notes
 
 ## running
 
@@ -36,11 +55,13 @@ Currently tested like this:
 
 ## contributing
 
-At the moment the server needs to be thoroughly tested for compatibility, stability, and security, so contributions of any kind are welcome!
-Feel free to submit a pull request or raise an issue. :)
+At the moment the server needs a lot of work! 
+Many things must be implemented, and then thoroughly tested for compatibility, stability, and security.
+If you would like to contribute, feel free to contact me, raise an issue, or submit a pull request. :)
 
 ## documentation
 
+(OUTOFDATE - see roadmap) 
 See `swagger.yaml` for the api documentation - can be viewed using a [swagger](http://swagger.io/) ui.
 
 ## License
