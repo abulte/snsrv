@@ -15,13 +15,21 @@ DEBUG = True
 
 SECRET_KEY = 'nothing'
 
+# the db backend to use - currently only sqlite ('sqlite_db')
+DB_TYPE = 'sqlite_db'
 
-# the mongodb database name to use
-DATABASE_ROOT_NAME = 'simplenote1'
+# options to pass to the db backend
+# below for sqlite
+DB_OPTIONS = {
+        'FILE': 'sqlite.db'
+        }
+## example for mongodb
+# DB_OPTIONS = {
+#         'HOST': 'localhost',
+#         'PORT': 3545
+#         'DATABASE_ROOT': 'simplenote' # the database root to use
+#         }
 
-# mongodb server info
-MONGO_HOST = 'localhost'
-MONGO_PORT = 27017
 
 
 

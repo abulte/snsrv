@@ -15,13 +15,17 @@ import json
 import bcrypt
 import random
 import uuid
+
+# TODO: get rid of these
+from notesdb import NotesDB
 from pymongo import MongoClient
 
-from notesdb import NotesDB
 
 from datetime import timedelta
 from flask import make_response, request, current_app
 from functools import update_wrapper
+
+import db_frontend
 
 
 def crossdomain(origin=None, methods=None, headers=None,
@@ -316,17 +320,15 @@ if __name__ == '__main__':
     if os.environ.get('FLASK_SIMPLENOTE_SRV'):
         app.config.from_envvar('FLASK_SIMPLENOTE_SRV')
 
-    mongo_client = MongoClient(app.config.get('MONGO_HOST'), app.config.get('MONGO_PORT'))
 
-    # TODO: get this info from settings
-    import db_frontend
-    db_type = 'sqlite_db'
-    options = {"filename":'db/sqlite.db'}
+    db_type = app.config.get('DB_TYPE')
+    options = app.config.get('DB_OPTIONS')
+
     backend = __import__(db_type).Database(options)
+    backend.first_run()
     db = db_frontend.Database(backend)
     app.config['database'] = db
 
-    app.config['users_cache'] = {}
     app.secret_key = app.config.get('SECRET_KEY')
 
     app.run(
