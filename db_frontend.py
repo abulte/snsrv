@@ -3,6 +3,7 @@
 # must define lowerlevel db something...
 
 import datetime
+import uuid
 
 class Database():
     def __init__(self, thedatabase):
@@ -19,6 +20,26 @@ class Database():
         else:
             userdate['token'] = None
         return userdata
+
+    def check_token(self, username, token):
+        user = self.get_user(username)
+        if user['token'] and user['token'] == token:
+            return True
+        return False
+
+    def get_token(self, username):
+        user = self.get_user(username)
+
+        # if already token, return it
+        if user['token']:
+            return user['token']
+
+        # otherwise generate a new one
+        token = (str(uuid.uuid4())+str(uuid.uuid4())).replace('-','').upper()
+        tokendate = datetime.datetime.utcnow()
+        self.database.update_token(user['id'], token, tokendate)
+
+
 
     def get_note(self, userid, noteid, version=None):
         note = self.database.get_note(noteid, version)

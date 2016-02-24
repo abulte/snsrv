@@ -3,6 +3,7 @@
 
 import sqlite3
 import os.path
+import datetime
 
 class DB(object):
     def __init__(self, args):
@@ -13,6 +14,9 @@ class DB(object):
         raise NotImplemented()
 
     def create_user(self, email, hashed):
+        raise NotImplemented()
+
+    def update_token(self, email, token, tokendate):
         raise NotImplemented()
 
     def get_note(self, key, version=None):
@@ -38,6 +42,12 @@ class Database(DB):
     def get_user(self, email):
         self.cur.execute("select * from users where email = ?", email) 
         return self.cur.fetchone()
+
+    def create_user(self, email, hashed):
+        self.cur.execute("insert into users values (null, :email, :hashed)", email=email, hashed=hashed)
+
+    def update_token(self, email, token, tokendate):
+        self.cur.execute("update users set token = ?, tokendate = ? where email = ?", token, tokendate, token)
 
     def get_note(self, key, version=None):
         self.cur.execute("select * from notes where key = ?", key)

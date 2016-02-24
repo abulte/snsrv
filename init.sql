@@ -6,6 +6,7 @@ create table if not exists users
   id int not null,
   email  text not null,
   hashed text not null,
+
   primary key (id),
   unique (email)
 );
@@ -21,6 +22,7 @@ create table if not exists notes
   minversion integer,
   publishkey text,
   content text,
+
   primary key (id),
   unique (key)
 )

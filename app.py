@@ -75,6 +75,7 @@ def check_auth(username, password):
        password combination is valid.
        Returns True if valid, False otherwise
     """
+    # TODO: maybe this should be done in db_frontend?
 
     db = app.config.get('database')
 
@@ -102,30 +103,6 @@ def create_user(username, password):
     return (message, status)
 
 
-def get_token(username):
-    """ returns a valid token for the given user (generates new one if needed)
-        currently doesn't validate user - expected to be protected by check_auth function
-    """
-
-    db = app.config.get('database')['users']
-    user = db.find_one({'username': username})
-
-    if user.get('tokenisvalid', False):
-        # token is valid, return it
-        return user['token']
-    else:
-        # else generate new one
-        token = (str(uuid.uuid4())+str(uuid.uuid4())).replace('-','').upper()
-
-        user['token'] = token
-        user['tokenisvalid'] = True
-        db.update({'_id': user['_id']}, user)
-
-        return token
-
-
-
-
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -134,15 +111,10 @@ def requires_auth(f):
 
         # check for existance
         if not username or not token:
-            return Response("invalid or missing credentials", 401)
+            return Response("missing credentials", 401)
 
-        # check for user existance
-        user = app.config.get('database').get_user(username)
-        if not user:
-            return Response("invalid or missing credentials", 401)
-
-        # check token valid. 
-        if user.get('token', None) == token:
+        ok = db.check_token(username, token)
+        if ok:
             return f(user['id'], *args, **kwargs)
 
         return Response("invalid credentials", 401)
@@ -170,7 +142,6 @@ def get_note(userid, note_id, version=None):
 @crossdomain(origin='*')
 @requires_auth
 def update_note(userid, note_id):
-    # TODO: update database (ongoing) - up to here
     data = request.get_data().decode(encoding='utf-8')
     # not sure if need this
     if data.lstrip().startswith('%7B'): # someone urlencoded the post data :(
@@ -255,7 +226,7 @@ def login():
         return Response("invalid or missing credentials", 401)
     
     if check_auth(email, password):
-        return get_token(email) # note this function not secured due to check_auth protecting it
+        return db.get_token(email) 
 
     return Response("invalid credentials", 401)
 
@@ -327,6 +298,8 @@ if __name__ == '__main__':
 
     backend = __import__(db_type).Database(options)
     backend.first_run()
+
+    global db
     db = db_frontend.Database(backend)
     app.config['database'] = db
 
