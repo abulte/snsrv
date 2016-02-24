@@ -14,6 +14,7 @@ class NotesDB():
         self.database = database
         self.re_float = re.compile(r'^(\d+\.\d+|\d+)$')
         self.re_int = re.compile(r'^\d+$')
+        print(app.config.get('SECRET_KEY'))
 
 
     def get_note(self, note_id, version=None):

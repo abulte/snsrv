@@ -72,9 +72,9 @@ def check_auth(username, password):
        Returns True if valid, False otherwise
     """
 
-    users_db = app.config.get('database')['users']
+    db = app.config.get('database')
 
-    user = users_db.find_one({'username': username})
+    user = db.get_user(username)
     if not user:
         return False # username doesn't exist
 
@@ -85,17 +85,18 @@ def check_auth(username, password):
     return False
 
 def create_user(username, password):
-    """ function to create a new user in the db - should also check for errors"""
-    # TODO: verify here, or in server part? use flashing (http://flask.pocoo.org/docs/0.10/patterns/flashing/#message-flashing-pattern) to show login/register/etc errors
+    """ function to create a new user in the db - should also validate"""
     if not username or not password:
-        return False
+        return ("username and password are required fields!", False)
+    if len(password) < 8:
+        return ("password must have more than 8 characters", False)
+    if len(username) < 1 or len(username) > 40:
+        return ("username invalid length", False)
 
-    users_db = app.config.get('database')['users']
-    if len(username) < 30 and len(username) > 0 and not users_db.find_one({'username': username}):
-        users_db.insert({'username': username, 'hashed': bcrypt.hashpw(password.encode(), bcrypt.gensalt())})
-        return True
+    db = app.config.get('database')
+    message, status = db.create_user(username, bcrypt.hashpw(password.encode(), bcrypt.gensalt()))
+    return (message, status)
 
-    return False
 
 def get_token(username):
     """ returns a valid token for the given user (generates new one if needed)
@@ -128,24 +129,17 @@ def requires_auth(f):
         username = request.args.get("email",None)
 
         # check for existance
-        if username is None or token is None:
+        if not username or not token:
             return Response("invalid or missing credentials", 401)
 
         # check for user existance
-        user = app.config.get('database')['users'].find_one({'username': username})
+        user = app.config.get('database').get_user(username)
         if not user:
             return Response("invalid or missing credentials", 401)
 
-        # check token valid. TODO: token expire time
-        if user['token'] == token and user.get('tokenisvalid', False):
-            # caching to avoid creating the notesdb class every time
-            users_cache = app.config.get('users_cache')
-            if username in users_cache:
-                db = users_cache[username]
-            else:
-                db = NotesDB(app.config.get('database')['notes'][username])
-                users_cache[username] = db
-            return f(db, *args, **kwargs)
+        # check token valid. 
+        if user.get('token', None) == token:
+            return f(user['id'], *args, **kwargs)
 
         return Response("invalid credentials", 401)
 
@@ -159,19 +153,20 @@ app = Flask(__name__)
 @app.route("/api2/data/<note_id>")
 @crossdomain(origin='*')
 @requires_auth
-def get_note(user, note_id, version=None):
-    note = user.get_note(note_id, version)
+def get_note(userid, note_id, version=None):
+    db = app.config.get('database')
+    note = db.get_note(userid, note_id, version)
     if note is None:
         return Response("Cannot get: note not found",404)
 
     return jsonify(**note)
-    #return "data endpoint - get note id:%s, version:%s" % (note_id, str(version))
 
 
 @app.route("/api2/data/<note_id>", methods=['POST'])
 @crossdomain(origin='*')
 @requires_auth
 def update_note(user, note_id):
+    # TODO: update database (ongoing) - up to here
     data = request.get_data().decode(encoding='utf-8')
     if data.lstrip().startswith('%7B'): # someone urlencoded the post data :(
         data = unquote(data)
@@ -323,8 +318,15 @@ if __name__ == '__main__':
         app.config.from_envvar('FLASK_SIMPLENOTE_SRV')
 
     mongo_client = MongoClient(app.config.get('MONGO_HOST'), app.config.get('MONGO_PORT'))
-    app.config['mongo_client'] = mongo_client
-    app.config['database'] = mongo_client[app.config.get('DATABASE_ROOT_NAME')]
+
+    # TODO: get this info from settings
+    import db_frontend
+    db_type = 'sqlite_db'
+    options = {"filename":'db/sqlite.db'}
+    backend = __import__(db_type).Database(options)
+    db = db_frontend.Database(backend)
+    app.config['database'] = db
+
     app.config['users_cache'] = {}
     app.secret_key = app.config.get('SECRET_KEY')
 
