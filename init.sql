@@ -6,6 +6,8 @@ create table if not exists users
   id integer not null,
   email  text not null,
   hashed text not null,
+  token text,
+  tokendate numeric, -- seconds since epoch
   unique (email),
   primary key (id)
 );

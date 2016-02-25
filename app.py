@@ -78,8 +78,6 @@ def check_auth(username, password):
     """
     # TODO: maybe this should be done in db_frontend?
 
-    db = app.config.get('database')
-
     user = db.get_user(username)
     if not user:
         return False # username doesn't exist
@@ -287,13 +285,18 @@ def web_register():
         </form>
         '''
 
+def dict_factory(cursor, row):
+    d = {}
+    for idx, col in enumerate(cursor.description):
+        d[col[0]] = row[idx]
+    return d
 
 # needed for setup of connections for sqlite database (otherwise get threading issues)
 @app.before_request
 def before_request():
     if app.config.get('DB_TYPE') == 'sqlite_db':
         g.con = sqlite3.connect(app.config.get('DB_OPTIONS').get('FILE'))
-        g.con.row_factory = sqlite3.Row # so returns dictionary of stuff, rather than tuples
+        g.con.row_factory = dict_factory # so returns dictionary of stuff, rather than tuples
         g.cur = g.con.cursor()
 
 @app.teardown_request

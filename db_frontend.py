@@ -13,12 +13,12 @@ class Database():
         userdata = self.database.get_user(username)
         if not userdata:
             return None
-        if userdata['token']:
+        if userdata.get('token', None):
             # remove if over 24 hours old
             if (datetime.datetime.utcnow() - userdata['tokendate']).seconds > 86400:
                 userdata['token'] = None
         else:
-            userdate['token'] = None
+            userdata['token'] = None
         return userdata
 
     def create_user(self, username, hashed):

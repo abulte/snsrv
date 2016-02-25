@@ -46,10 +46,11 @@ class Database(DB):
     def get_user(self, email):
         g.cur.execute("select * from users where email = ?", (email,)) 
         user = g.cur.fetchone()
-        return user
+        if user:
+            return user
+        return None
 
     def create_user(self, email, hashed):
-        print('creating user!')
         if self.get_user(email):
             return False
         g.cur.execute("insert into users(email, hashed) values(?, ?)", (email, hashed))
@@ -62,7 +63,7 @@ class Database(DB):
 
     def get_note(self, key, version=None):
         self.cur.execute("select * from notes where key = ?", key)
-        note =  self.cur.fetchone()
+        note = self.cur.fetchone()
         if note and version:
             self.cur.execute("select content from versions where key = ? and version = ?", key, version)
             old_content = self.cur.fetchone()
