@@ -65,7 +65,7 @@ class Database(DB):
 
     def get_note(self, email, key, version=None):
         user = self.get_user(email)
-        g.cur.execute("select key, deleted, modifydate, createdate, syncnum, version, minversion, sharekey, publishkey, content, pinned, markdown, unread, list from notes where key = ? and userid = ?", (key, user['id']))
+        g.cur.execute("select id, key, deleted, modifydate, createdate, syncnum, version, minversion, sharekey, publishkey, content, pinned, markdown, unread, list from notes where key = ? and userid = ?", (key, user['id']))
         note = g.cur.fetchone()
         # TODO: +future +enhancement check for share key to allow sharing notes around users
         if note and version:
@@ -75,11 +75,17 @@ class Database(DB):
             note['content'] = old_content['content']
 
         # TODO: get tags (need another table
+        tagsOBJ = g.cur.execute("select name from tagged join tags on id=tagid where noteid=?", (note['id'],)).fetchall()
+        if tagsOBJ:
+            note['tags'] = [x['name'] for x in tagsOBJ]
+        else:
+            note['tags'] = []
 
-        print(note)
+
         systemtags = [tag for tag in ['pinned', 'markdown', 'unread', 'list'] if note.get(tag, None)]
         note['systemtags'] = systemtags
 
+        del note['id']
         return note
 
 

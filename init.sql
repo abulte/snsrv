@@ -37,10 +37,33 @@ create table if not exists notes
   foreign key (userid) references users(id)
 );
 
+create table if not exists tags
+(
+  id integer not null,
+  name text not null,
+  version integer,
+
+  primary key (id),
+  unique (name)
+);
+
+create table if not exists tagged
+(
+  noteid not null,
+  tagid not null,
+
+  foreign key (noteid) references notes(id),
+  foreign key (tagid) references tags(id),
+
+  primary key (noteid, tagid)
+);
 
 -- sample db stuff -- remove when in production!
 -- username: sam, password: aoeuaoeu
 INSERT INTO users select 1,'sam',X'243262243132246B72543036492F68355754504C324137732E314570754F595037666B624E333268682F6641726A732F6C5647547935372F79346832',NULL,NULL where not exists (select * from users where email = 'sam');
 
 insert into notes select 1, 1, 'abc', 0, 1456325139.593469, 1456325139.593469, 1, 1, 1, null, null, 'hi there!', 0, null, 1, 0 where not exists (select * from notes where key = 'abc');
+
+insert into tags select 1, 'tag1', 1 where not exists (select * from tags where id = 1);
+insert into tagged select 1, 1 where not exists (select * from tagged where noteid = 1 and tagid = 1);
 

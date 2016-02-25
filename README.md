@@ -40,6 +40,7 @@ The following software and libraries are used:
 - [INPROGRESS] complete and stabilize a database backend
 - [TODO] sanitize data on update and create, etc.
 - [TODO] implement complete api (aiming for simplenote api v2.1.3)
+- [TODO] implement note sharing
 - [TODO] more testing of api!
 - [TODO] document the api
 - [TODO] web interface for managing users
@@ -80,4 +81,4 @@ See `swagger.yaml` for the api documentation - can be viewed using a [swagger](h
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-Copyright © 2015 Samuel Walladge
+Copyright © 2016 Samuel Walladge
