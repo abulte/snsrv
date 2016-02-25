@@ -40,10 +40,13 @@ create table if not exists notes
 create table if not exists tags
 (
   id integer not null,
+  _index integer not null,
   name text not null,
+  lower_name text not null,
   version integer,
 
   primary key (id),
+  unique (lower_name),
   unique (name)
 );
 
@@ -64,6 +67,6 @@ INSERT INTO users select 1,'sam',X'243262243132246B72543036492F68355754504C32413
 
 insert into notes select 1, 1, 'abc', 0, 1456325139.593469, 1456325139.593469, 1, 1, 1, null, null, 'hi there!', 0, null, 1, 0 where not exists (select * from notes where key = 'abc');
 
-insert into tags select 1, 'tag1', 1 where not exists (select * from tags where id = 1);
+insert into tags select 1, 1, 'Tag1', 'tag1', 1 where not exists (select * from tags where id = 1);
 insert into tagged select 1, 1 where not exists (select * from tagged where noteid = 1 and tagid = 1);
 

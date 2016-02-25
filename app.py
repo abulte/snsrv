@@ -160,19 +160,23 @@ def update_note(userid, note_id):
 @app.route("/api2/data", methods=['POST'])
 @crossdomain(origin='*')
 @requires_auth
-def create_note(user):
+def create_note(username):
     data = request.get_data().decode(encoding='utf-8')
+    if not data:
+        return Response("no note data", 400)
     if data.lstrip().startswith('%7B'): # someone urlencoded the post data :(
         data = unquote(data)
 
-    data = json.loads(data)
-    status, data = user.create_note(data)
+    try:
+        data = json.loads(data)
+    except ValueError:
+        return Response("invalid json data", 400)
 
-    if status == 200:
-        if data is None:
-            return Response("Cannot create: unknown error",500)
+    data, ok = db.create_note(username, data)
+
+    if ok:
         return jsonify(**data)
-    return Response(data, status)
+    return Response(data, 400)
 
 
 

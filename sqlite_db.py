@@ -74,7 +74,6 @@ class Database(DB):
             old_content = self.cur.fetchone()
             note['content'] = old_content['content']
 
-        # TODO: get tags (need another table
         tagsOBJ = g.cur.execute("select name from tagged join tags on id=tagid where noteid=?", (note['id'],)).fetchall()
         if tagsOBJ:
             note['tags'] = [x['name'] for x in tagsOBJ]
@@ -84,12 +83,48 @@ class Database(DB):
 
         systemtags = [tag for tag in ['pinned', 'markdown', 'unread', 'list'] if note.get(tag, None)]
         note['systemtags'] = systemtags
+        # TODO: remove markdown, list, etc. keys from note dict (they should only be in systemtags)
 
         del note['id']
         return note
 
 
+    def create_note(self, email, note_data):
+        user = self.get_user(email)
+
+        note_data['userid'] = user['id']
+
+        sys_tags = note_data['systemtags']
+        for t in ['pinned', 'markdown', 'list']:
+            note_data[t] = 1 if t in sys_tags else 0
+
+        g.cur.execute('insert into notes(userid, key, deleted, modifydate, createdate, syncnum, version, minversion, content, pinned, markdown, list)   values (:userid, :key, :deleted, :modifydate, :createdate, :syncnum, :version, :minversion, :content, :pinned, :markdown, :list)', note_data)
+
+        row_id = g.cur.execute('select id from notes where key=?', (note_data['key'],)).fetchone()['id']
+
+        for t in note_data['tags']:
+            i = self.get_and_create_tag(t)
+            self.tagit(key, i)
+        
+        g.con.commit()
+        return True
+
+    def tagit(self, notekey, tag):
+        noteid = g.cur.execute('select id from notes where key = ?', (key,)).fetchone()['id']
+        g.cur.execute('insert into tagged select ?, ? where not exists (select * from tagged where noteid = ? and tagid = ?', (noteid, tag, noteid, tag))
+
+
+    def get_and_create_tag(self, t):
+        if not g.cur.execute('select * from tags where lower_name = ?', (t.lower(),)).fetchone():
+            g.cur.execute('insert into tags(_index, name, lower_name, version) values (?, ?, ?, ?)', (1, t, t.lower(), 1))
+        return g.cur.execute('select id from tags where lower_name = ?', (t.lower(),)).fetchone()['id']
+
+
+
+    # TODO: don't forget index is stored in sql as _index
+
     def update_note(self, key, data):
+        # TODO: this broken
         self.cur.execute("update notes set deleted=:deleted, modifydate=:modifydate, syncnum=:syncnum, minversion=:minversion, publishkey=:publishkey, content=:content  where key = ?", key, **data)
         self.con.commit()
         #TODO: handle tags (here or higher up?)
