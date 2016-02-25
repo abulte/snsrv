@@ -286,18 +286,22 @@ def web_register():
             <p><input type=submit value=Register>
         </form>
         '''
-def connect_db():
-    return sqlite3.connect('sqlite.db')
 
+
+# needed for setup of connections for sqlite database (otherwise get threading issues)
 @app.before_request
 def before_request():
-    g.db = connect_db()
-    g.db.row_factory = sqlite3.Row # so returns dictionary of stuff, rather than tuples
+    if app.config.get('DB_TYPE') == 'sqlite_db':
+        g.con = sqlite3.connect(app.config.get('DB_OPTIONS').get('FILE'))
+        g.con.row_factory = sqlite3.Row # so returns dictionary of stuff, rather than tuples
+        g.cur = g.con.cursor()
 
 @app.teardown_request
 def teardown_request(exception):
-    if hasattr(g, 'db'):
-        g.db.close()
+    if app.config.get('DB_TYPE') == 'sqlite_db':
+        if hasattr(g, 'db'):
+            g.con.close()
+
 
 if __name__ == '__main__':
     app.config.from_object('config')

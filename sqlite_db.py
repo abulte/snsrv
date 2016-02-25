@@ -30,31 +30,30 @@ from flask import g
 class Database(DB):
     def __init__(self, args):
         super(Database, self).__init__(args)
-
         self.filename = args['FILE']
-        self.con = sqlite3.connect(self.filename)
-        self.con.row_factory = sqlite3.Row # so returns dictionary of stuff, rather than tuples
-        self.cur = self.con.cursor()
+        # database setup by flask - use:
+        #   g.con == connection object
+        #   g.cur == cursor
+
 
     def first_run(self):
-        self.cur.executescript(open('init.sql').read())
-        self.con.commit()
+        con = sqlite3.connect(self.filename)
+        cur = con.cursor()
+        cur.executescript(open('init.sql').read())
+        con.commit()
+        con.close()
 
     def get_user(self, email):
-        print(email)
-        cur = g.db.cursor()
-        cur.execute("select * from users where email = ?", (email,)) 
-        user = cur.fetchone()
-        print(user)
+        g.cur.execute("select * from users where email = ?", (email,)) 
+        user = g.cur.fetchone()
         return user
 
     def create_user(self, email, hashed):
         print('creating user!')
         if self.get_user(email):
             return False
-        g.db.cursor().execute("insert into users(email, hashed) values(?, ?)", (email, hashed))
-        g.db.commit()
-        print(g.db.cursor().execute('select * from users').fetchall())
+        g.cur.execute("insert into users(email, hashed) values(?, ?)", (email, hashed))
+        g.con.commit()
         return True
 
     def update_token(self, email, token, tokendate):
