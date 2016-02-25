@@ -21,6 +21,10 @@ class Database():
             userdate['token'] = None
         return userdata
 
+    def create_user(self, username, hashed):
+        result =  self.database.create_user(username, hashed)
+        return result
+
     def check_token(self, username, token):
         user = self.get_user(username)
         if user['token'] and user['token'] == token:

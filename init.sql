@@ -3,17 +3,16 @@
 
 create table if not exists users 
 (
-  id int not null,
+  id integer not null,
   email  text not null,
   hashed text not null,
-
-  primary key (id),
-  unique (email)
+  unique (email),
+  primary key (id)
 );
 
 create table if not exists notes 
 (
-  id int not null,
+  id integer not null,
   key text not null,
   deleted integer,  -- should be 0 or 1
   modifydate numeric, -- seconds since epoch

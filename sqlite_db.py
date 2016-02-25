@@ -25,6 +25,7 @@ class DB(object):
     def update_note(self, key, data):
         raise NotImplemented()
 
+from flask import g
 
 class Database(DB):
     def __init__(self, args):
@@ -40,14 +41,25 @@ class Database(DB):
         self.con.commit()
 
     def get_user(self, email):
-        self.cur.execute("select * from users where email = ?", email) 
-        return self.cur.fetchone()
+        print(email)
+        cur = g.db.cursor()
+        cur.execute("select * from users where email = ?", (email,)) 
+        user = cur.fetchone()
+        print(user)
+        return user
 
     def create_user(self, email, hashed):
-        self.cur.execute("insert into users values (null, :email, :hashed)", email=email, hashed=hashed)
+        print('creating user!')
+        if self.get_user(email):
+            return False
+        g.db.cursor().execute("insert into users(email, hashed) values(?, ?)", (email, hashed))
+        g.db.commit()
+        print(g.db.cursor().execute('select * from users').fetchall())
+        return True
 
     def update_token(self, email, token, tokendate):
         self.cur.execute("update users set token = ?, tokendate = ? where email = ?", token, tokendate, token)
+        self.con.commit()
 
     def get_note(self, key, version=None):
         self.cur.execute("select * from notes where key = ?", key)
@@ -61,5 +73,6 @@ class Database(DB):
 
     def update_note(self, key, data):
         self.cur.execute("update notes set deleted=:deleted, modifydate=:modifydate, syncnum=:syncnum, minversion=:minversion, publishkey=:publishkey, content=:content  where key = ?", key, **data)
+        self.con.commit()
         #TODO: handle tags (here or higher up?)
 

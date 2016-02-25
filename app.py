@@ -7,7 +7,7 @@
 import os
 from flask import Flask, request, Response, jsonify, \
         session, redirect, url_for, render_template, escape, \
-        flash
+        flash, g
 from functools import wraps
 from urllib.parse import parse_qs, quote, unquote
 import base64
@@ -15,6 +15,7 @@ import json
 import bcrypt
 import random
 import uuid
+import sqlite3
 
 # TODO: get rid of these
 from notesdb import NotesDB
@@ -94,13 +95,12 @@ def create_user(username, password):
     if not username or not password:
         return ("username and password are required fields!", False)
     if len(password) < 8:
-        return ("password must have more than 8 characters", False)
+        return ("password must 8 or more characters", False)
     if len(username) < 1 or len(username) > 40:
         return ("username invalid length", False)
 
-    db = app.config.get('database')
-    message, status = db.create_user(username, bcrypt.hashpw(password.encode(), bcrypt.gensalt()))
-    return (message, status)
+    status = db.create_user(username, bcrypt.hashpw(password.encode(), bcrypt.gensalt()))
+    return ("", status)
 
 
 def requires_auth(f):
@@ -266,16 +266,18 @@ def web_register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if create_user(username, password):
+        message, ok = create_user(username, password)
+        if ok:
             return redirect('/login')
+
         return '''
-            Register again (failed)
+            Try again! {}
             <form action="" method="post">
                 <p>Username <input type=text name=username>
                 <p>Password <input type=password name=password>
                 <p><input type=submit value=Register>
             </form>
-            '''
+            '''.format(message)
     return '''
         Register
         <form action="" method="post">
@@ -284,7 +286,18 @@ def web_register():
             <p><input type=submit value=Register>
         </form>
         '''
+def connect_db():
+    return sqlite3.connect('sqlite.db')
 
+@app.before_request
+def before_request():
+    g.db = connect_db()
+    g.db.row_factory = sqlite3.Row # so returns dictionary of stuff, rather than tuples
+
+@app.teardown_request
+def teardown_request(exception):
+    if hasattr(g, 'db'):
+        g.db.close()
 
 if __name__ == '__main__':
     app.config.from_object('config')
