@@ -58,8 +58,9 @@ class Database(DB):
         return True
 
     def update_token(self, email, token, tokendate):
-        self.cur.execute("update users set token = ?, tokendate = ? where email = ?", token, tokendate, token)
-        self.con.commit()
+        print(email, token, tokendate)
+        g.cur.execute("update users set token = ?, tokendate = ? where email = ?", (token, tokendate, email))
+        g.con.commit()
 
     def get_note(self, key, version=None):
         self.cur.execute("select * from notes where key = ?", key)

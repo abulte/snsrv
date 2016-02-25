@@ -15,7 +15,7 @@ class Database():
             return None
         if userdata.get('token', None):
             # remove if over 24 hours old
-            if (datetime.datetime.utcnow() - userdata['tokendate']).seconds > 86400:
+            if (datetime.datetime.utcnow().timestamp() - userdata['tokendate']) > 86400:
                 userdata['token'] = None
         else:
             userdata['token'] = None
@@ -40,8 +40,9 @@ class Database():
 
         # otherwise generate a new one
         token = (str(uuid.uuid4())+str(uuid.uuid4())).replace('-','').upper()
-        tokendate = datetime.datetime.utcnow()
-        self.database.update_token(user['id'], token, tokendate)
+        tokendate = datetime.datetime.utcnow().timestamp()
+        self.database.update_token(user['email'], token, tokendate)
+        return token
 
 
 
