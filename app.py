@@ -113,7 +113,7 @@ def requires_auth(f):
 
         ok = db.check_token(username, token)
         if ok:
-            return f(user['id'], *args, **kwargs)
+            return f(username, *args, **kwargs)
 
         return Response("invalid credentials", 401)
 
@@ -127,9 +127,9 @@ app = Flask(__name__)
 @app.route("/api2/data/<note_id>")
 @crossdomain(origin='*')
 @requires_auth
-def get_note(userid, note_id, version=None):
+def get_note(username, note_id, version=None):
     db = app.config.get('database')
-    note = db.get_note(userid, note_id, version)
+    note = db.get_note(username, note_id, version)
     if note is None:
         return Response("Cannot get: note not found",404)
 

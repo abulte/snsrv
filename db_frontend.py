@@ -44,12 +44,9 @@ class Database():
         self.database.update_token(user['email'], token, tokendate)
         return token
 
-
-
-    def get_note(self, userid, noteid, version=None):
-        note = self.database.get_note(noteid, version)
-        if not note or note['userid'] != userid:
-            # TODO: +future +enhancement check for share key to allow sharing notes around users
+    def get_note(self, username, noteid, version=None):
+        note = self.database.get_note(username, noteid, version)
+        if not note:
             return None
         return note
 

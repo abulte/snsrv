@@ -37,6 +37,7 @@ class Database(DB):
 
 
     def first_run(self):
+        print('first run')
         con = sqlite3.connect(self.filename)
         cur = con.cursor()
         cur.executescript(open('init.sql').read())
@@ -62,13 +63,23 @@ class Database(DB):
         g.cur.execute("update users set token = ?, tokendate = ? where email = ?", (token, tokendate, email))
         g.con.commit()
 
-    def get_note(self, key, version=None):
-        self.cur.execute("select * from notes where key = ?", key)
-        note = self.cur.fetchone()
+    def get_note(self, email, key, version=None):
+        user = self.get_user(email)
+        g.cur.execute("select key, deleted, modifydate, createdate, syncnum, version, minversion, sharekey, publishkey, content, pinned, markdown, unread, list from notes where key = ? and userid = ?", (key, user['id']))
+        note = g.cur.fetchone()
+        # TODO: +future +enhancement check for share key to allow sharing notes around users
         if note and version:
-            self.cur.execute("select content from versions where key = ? and version = ?", key, version)
+            # TODO: implement
+            self.cur.execute("select content from versions where key = ? and version = ?", (key, version))
             old_content = self.cur.fetchone()
             note['content'] = old_content['content']
+
+        # TODO: get tags (need another table
+
+        print(note)
+        systemtags = [tag for tag in ['pinned', 'markdown', 'unread', 'list'] if note.get(tag, None)]
+        note['systemtags'] = systemtags
+
         return note
 
 
