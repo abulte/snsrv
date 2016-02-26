@@ -64,15 +64,20 @@ class Database(DB):
 
     def get_note(self, email, key, version=None):
         user = self.get_user(email)
-        g.cur.execute("select id, key, deleted, modifydate, createdate, syncnum, version, minversion, sharekey, publishkey, content, pinned, markdown, unread, list from notes where key = ? and userid = ?", (key, user['id']))
+
+        # 'and userid =' is to ensure note is owned by user
+        g.cur.execute("select key, deleted, modifydate, createdate, syncnum, version, minversion, sharekey, publishkey, content, pinned, markdown, unread, list from notes where key = ? and userid = ?", (key, user['id']))
         note = g.cur.fetchone()
+        if not note:
+            return None
         # TODO: +future +enhancement check for share key to allow sharing notes around users
-        if note and version:
+
+        # below also means getting latest version will return full note
+        if note and version and version != note['version']:
             # TODO: implement
-            self.cur.execute("select content from versions where key = ? and version = ?", (key, version))
-            old_content = self.cur.fetchone()
-            note['content'] = old_content['content']
-            # TODO: return content, versiondate, version here
+            g.cur.execute("select * from versions where notekey = ? and version = ?", (key, version))
+            note = g.cur.fetchone()
+            return note
 
         tagsOBJ = g.cur.execute("select name from tagged join tags on id=tagid where notekey=?", (key,)).fetchall()
         if tagsOBJ:
@@ -108,17 +113,19 @@ class Database(DB):
         return True
 
     def tagit(self, notekey, tag):
-        g.cur.execute('insert into tagged select ?, ? where not exists (select * from tagged where notekey = ? and tagid = ?', (notekey, tag, notekey, tag))
+        g.cur.execute('insert into tagged select ?, ? where not exists (select * from tagged where notekey = ? and tagid = ?)', (notekey, tag, notekey, tag))
 
 
     def get_and_create_tag(self, t):
         if not g.cur.execute('select * from tags where lower_name = ?', (t.lower(),)).fetchone():
             g.cur.execute('insert into tags(_index, name, lower_name, version) values (?, ?, ?, ?)', (1, t, t.lower(), 1))
+            g.con.commit()
         return g.cur.execute('select id from tags where lower_name = ?', (t.lower(),)).fetchone()['id']
 
 
 
-    # TODO: don't forget index is stored in sql as _index
+    # TODO: don't forget index for tag is stored in sql as _index
+
 
     def update_note(self, note_data):
         # note - note_data contains key
@@ -127,7 +134,7 @@ class Database(DB):
         for t in ['pinned', 'markdown', 'list']:
             note_data[t] = 1 if t in sys_tags else 0
 
-        self.cur.execute("update notes set deleted=:deleted, modifydate=:modifydate, createdate=:createdate, syncnum=:syncnum, minversion=:minversion, publishkey=:publishkey, content=:content, version=:version, pinned=:pinned, markdown=:markdown, list=:list where key = :key", note_data)
+        g.cur.execute("update notes set deleted=:deleted, modifydate=:modifydate, createdate=:createdate, syncnum=:syncnum, minversion=:minversion, publishkey=:publishkey, content=:content, version=:version, pinned=:pinned, markdown=:markdown, list=:list where key = :key", note_data)
 
         key = note_data['key']
         for t in note_data['tags']:
@@ -139,8 +146,10 @@ class Database(DB):
 
 
     def save_version(self, notekey):
-        self.cur.execute('insert into versions select id, modifydate, content, version from notes where key = ?', (notekey,)) 
+        g.cur.execute('insert into versions select key, modifydate, content, version from notes where key = ?', (notekey,)) 
+        g.con.commit()
 
     def drop_old_versions(self, notekey, minversion):
-        self.cur.execute('delete from versions where version < ? and notekey = ?', (minversion, notekey))
+        g.cur.execute('delete from versions where version < ? and notekey = ?', (minversion, notekey))
+        g.con.commit()
 

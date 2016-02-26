@@ -5,6 +5,7 @@
 import datetime
 import uuid
 import copy
+import re
 
 class Database():
     def __init__(self, thedatabase):
@@ -52,8 +53,7 @@ class Database():
         return note
 
     def update_note(self, username, notekey, data):
-        #TODO: check note exists, user can access, do stuff for data verification
-        # TODO: check data types 
+        # TODO: check/validate data types 
 
         old_note = self.get_note(username, notekey)
         if not old_note:
@@ -64,13 +64,15 @@ class Database():
             # then save old version
             self.database.save_version(notekey)
             old_note['content'] = content
+            # TODO: currently version only increments when content changes (is this wanted?) - either way, syncnum is inc'd
+            old_note['version'] += 1
 
         s = datetime.datetime.utcnow().timestamp()
 
         old_note['modifydate'] = min(s, data.get('modifydate', s))
         # old_note['createdate'] = min(s, data.get('createdate', s)) # TODO: should createdate ever be modified?
 
-        old_note['version'] += 1
+        # TODO: handle version in new note data (ie for merge? and _whether to update or not_ - don't overwrite newer note with older note)
 
         old_note['minversion'] = max(old_note['version'] - 20, 1)  #TODO: allow configuring number of versions to keep
 
