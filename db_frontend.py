@@ -45,15 +45,63 @@ class Database():
         self.database.update_token(user['email'], token, tokendate)
         return token
 
-    def get_note(self, username, noteid, version=None):
-        note = self.database.get_note(username, noteid, version)
+    def get_note(self, username, notekey, version=None):
+        note = self.database.get_note(username, notekey, version)
         if not note:
             return None
         return note
 
-    def update_note(self, userid, noteid, data):
+    def update_note(self, username, notekey, data):
         #TODO: check note exists, user can access, do stuff for data verification
-        self.database.update_note(noteid, data)
+        # TODO: check data types 
+
+        old_note = self.get_note(username, notekey)
+        if not old_note:
+            return ('note with that key does not exist', 404)
+
+        content =  data.get('content', None)
+        if content and content != old_note['content']:
+            # then save old version
+            self.database.save_version(notekey)
+            old_note['content'] = content
+
+        s = datetime.datetime.utcnow().timestamp()
+
+        old_note['modifydate'] = min(s, data.get('modifydate', s))
+        # old_note['createdate'] = min(s, data.get('createdate', s)) # TODO: should createdate ever be modified?
+
+        old_note['version'] += 1
+
+        old_note['minversion'] = max(old_note['version'] - 20, 1)  #TODO: allow configuring number of versions to keep
+
+        self.database.drop_old_versions(notekey, old_note['minversion'])
+
+        # TODO: handling sharekey?
+
+        deleted = data.get('deleted', None)
+        if deleted == '1' or deleted == '0':
+            deleted = int(deleted)
+        if (deleted in [1,0]):
+            old_note['deleted'] = deleted
+
+        if 'systemtags' in data:
+            old_note['systemtags'] = [t for t in set(data.get('systemtags',[])) if t in ('pinned', 'markdown', 'list')]
+
+        if 'tags' in data:
+            tags = []
+            for t in set(data.get('tags', [])):
+                safe_tag = self._validate_tag(t)
+                if safe_tag:
+                    tags.append(safe_tag)
+            old_note['tags'] = tags
+
+
+        old_note['syncnum'] += 1
+
+        ok = self.database.update_note(copy.deepcopy(old_note))
+        if ok:
+            return (old_note, 200)
+        return ('unable to create note', 400)
 
     def create_note(self, username, data):
         note_data = {}
@@ -62,8 +110,11 @@ class Database():
         note_data['content'] = str(data['content'])
 
         note_data['key'] = str(uuid.uuid4()) + str(int(datetime.datetime.utcnow().timestamp()))
-        note_data['modifydate'] = datetime.datetime.utcnow()
-        note_data['createdate'] = datetime.datetime.utcnow()
+
+        s = datetime.datetime.utcnow().timestamp()
+        note_data['modifydate'] = min(s, data.get('modifydate', s))
+        note_data['createdate'] = min(s, data.get('createdate', s))
+
         note_data['version'] = 1
         note_data['minversion'] = 1
         note_data['publishkey'] = None

@@ -37,7 +37,6 @@ class Database(DB):
 
 
     def first_run(self):
-        print('first run')
         con = sqlite3.connect(self.filename)
         cur = con.cursor()
         cur.executescript(open('init.sql').read())
@@ -73,8 +72,9 @@ class Database(DB):
             self.cur.execute("select content from versions where key = ? and version = ?", (key, version))
             old_content = self.cur.fetchone()
             note['content'] = old_content['content']
+            # TODO: return content, versiondate, version here
 
-        tagsOBJ = g.cur.execute("select name from tagged join tags on id=tagid where noteid=?", (note['id'],)).fetchall()
+        tagsOBJ = g.cur.execute("select name from tagged join tags on id=tagid where notekey=?", (key,)).fetchall()
         if tagsOBJ:
             note['tags'] = [x['name'] for x in tagsOBJ]
         else:
@@ -85,7 +85,6 @@ class Database(DB):
         note['systemtags'] = systemtags
         # TODO: remove markdown, list, etc. keys from note dict (they should only be in systemtags)
 
-        del note['id']
         return note
 
 
@@ -100,8 +99,7 @@ class Database(DB):
 
         g.cur.execute('insert into notes(userid, key, deleted, modifydate, createdate, syncnum, version, minversion, content, pinned, markdown, list)   values (:userid, :key, :deleted, :modifydate, :createdate, :syncnum, :version, :minversion, :content, :pinned, :markdown, :list)', note_data)
 
-        row_id = g.cur.execute('select id from notes where key=?', (note_data['key'],)).fetchone()['id']
-
+        key = note_data['key']
         for t in note_data['tags']:
             i = self.get_and_create_tag(t)
             self.tagit(key, i)
@@ -110,8 +108,7 @@ class Database(DB):
         return True
 
     def tagit(self, notekey, tag):
-        noteid = g.cur.execute('select id from notes where key = ?', (key,)).fetchone()['id']
-        g.cur.execute('insert into tagged select ?, ? where not exists (select * from tagged where noteid = ? and tagid = ?', (noteid, tag, noteid, tag))
+        g.cur.execute('insert into tagged select ?, ? where not exists (select * from tagged where notekey = ? and tagid = ?', (notekey, tag, notekey, tag))
 
 
     def get_and_create_tag(self, t):
@@ -123,9 +120,27 @@ class Database(DB):
 
     # TODO: don't forget index is stored in sql as _index
 
-    def update_note(self, key, data):
-        # TODO: this broken
-        self.cur.execute("update notes set deleted=:deleted, modifydate=:modifydate, syncnum=:syncnum, minversion=:minversion, publishkey=:publishkey, content=:content  where key = ?", key, **data)
-        self.con.commit()
-        #TODO: handle tags (here or higher up?)
+    def update_note(self, note_data):
+        # note - note_data contains key
+
+        sys_tags = note_data['systemtags']
+        for t in ['pinned', 'markdown', 'list']:
+            note_data[t] = 1 if t in sys_tags else 0
+
+        self.cur.execute("update notes set deleted=:deleted, modifydate=:modifydate, createdate=:createdate, syncnum=:syncnum, minversion=:minversion, publishkey=:publishkey, content=:content, version=:version, pinned=:pinned, markdown=:markdown, list=:list where key = :key", note_data)
+
+        key = note_data['key']
+        for t in note_data['tags']:
+            i = self.get_and_create_tag(t)
+            self.tagit(key, i)
+        
+        g.con.commit()
+        return True
+
+
+    def save_version(self, notekey):
+        self.cur.execute('insert into versions select id, modifydate, content, version from notes where key = ?', (notekey,)) 
+
+    def drop_old_versions(self, notekey, minversion):
+        self.cur.execute('delete from versions where version < ? and notekey = ?', (minversion, notekey))
 

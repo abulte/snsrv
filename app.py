@@ -139,22 +139,22 @@ def get_note(username, note_id, version=None):
 @app.route("/api2/data/<note_id>", methods=['POST'])
 @crossdomain(origin='*')
 @requires_auth
-def update_note(userid, note_id):
+def update_note(username, note_id):
     data = request.get_data().decode(encoding='utf-8')
     # not sure if need this
     if data.lstrip().startswith('%7B'): # someone urlencoded the post data :(
         data = unquote(data)
 
-    data = json.loads(data)
+    try:
+        data = json.loads(data)
+    except ValueError:
+        return Response("invalid json data", 400)
 
-    status, data = db.update_note(userid, note_id, data)
+    data, status = db.update_note(username, note_id, data)
 
     if status == 200:
-        if data is None:
-            return Response("Cannot update: unknown error",500)
         return jsonify(**data)
     return Response(data, status)
-    #return "data endpoint - update note id:%s" % (note_id)
 
 
 @app.route("/api2/data", methods=['POST'])
