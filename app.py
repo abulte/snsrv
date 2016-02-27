@@ -180,18 +180,14 @@ def create_note(username):
 
 
 
-@app.route("/api2/data/<note_id>", methods=['DELETE'])
+@app.route("/api2/data/<notekey>", methods=['DELETE'])
 @crossdomain(origin='*')
 @requires_auth
-def delete_note(user, note_id):
-    status, data = user.delete_note(note_id)
+def delete_note(user, notekey):
+    message, status = db.delete_note(user, notekey)
 
-    if status == 200:
-        return ""
-    else:
-        return Response(data, status)
+    return Response(message, status)
     
-    #return "data endpoint - delete note id:%s" % (note_id)
 
 
 @app.route("/api2/index")

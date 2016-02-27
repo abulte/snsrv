@@ -37,13 +37,13 @@ create table if not exists notes
 
 create table if not exists versions
 (
-  notekey integer not null,
+  key integer not null,
   versiondate numeric, -- seconds since epoch
   content text,
   version integer not null,
 
-  primary key (notekey, version),
-  foreign key (notekey) references notes(key)
+  primary key (key, version),
+  foreign key (key) references notes(key)
 );
 
 create table if not exists tags

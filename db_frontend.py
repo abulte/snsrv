@@ -146,6 +146,12 @@ class Database():
         return ('unable to create note', False)
         
 
+    def delete_note(self, username, key):
+        data = self.database.delete_note(username, key)
+        return data
+
+
+
 
 
 

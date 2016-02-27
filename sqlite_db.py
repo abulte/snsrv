@@ -75,7 +75,7 @@ class Database(DB):
         # below also means getting latest version will return full note
         if note and version and version != note['version']:
             # TODO: implement
-            g.cur.execute("select * from versions where notekey = ? and version = ?", (key, version))
+            g.cur.execute("select * from versions where key = ? and version = ?", (key, version))
             note = g.cur.fetchone()
             return note
 
@@ -145,11 +145,41 @@ class Database(DB):
         return True
 
 
+    def delete_note(self, username, key):
+        # check user owns note
+        # delete all tagged entries associated
+        # delete all versions with same key
+        # delete note by key
+
+        user = self.get_user(username)
+
+        # 'and userid =' is to ensure note is owned by user
+        g.cur.execute("select * from notes where key = ? and userid = ?", (key, user['id']))
+        note = g.cur.fetchone()
+        if not note:
+            return ("note not found", 404)
+        elif note['deleted'] == 0:
+            return ("must send note to trash before permanently deleting", 400)
+
+        g.cur.execute("delete from tagged where notekey = ?", (key,))
+
+        # TODO: delete all tags that no longer have a tagged entry
+
+        g.cur.execute("delete from versions where key = ?", (key,))
+
+        g.cur.execute("delete from notes where key = ?", (key,))
+
+        g.con.commit()
+
+        return ("", 200)
+
+
+
     def save_version(self, notekey):
         g.cur.execute('insert into versions select key, modifydate, content, version from notes where key = ?', (notekey,)) 
         g.con.commit()
 
     def drop_old_versions(self, notekey, minversion):
-        g.cur.execute('delete from versions where version < ? and notekey = ?', (minversion, notekey))
+        g.cur.execute('delete from versions where version < ? and key = ?', (minversion, notekey))
         g.con.commit()
 
