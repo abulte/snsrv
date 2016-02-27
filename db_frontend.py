@@ -151,6 +151,9 @@ class Database():
         return data
 
 
+    def notes_index(self, username, length, since, mark):
+        # TODO
+        return {}
 
 
 

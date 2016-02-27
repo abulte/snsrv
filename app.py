@@ -193,7 +193,7 @@ def delete_note(user, notekey):
 @app.route("/api2/index")
 @crossdomain(origin='*')
 @requires_auth
-def get_notes_list(user):
+def get_notes_list(username):
 
     # all info in the querystring
     length = request.args.get("length", None)
@@ -201,7 +201,7 @@ def get_notes_list(user):
     mark = request.args.get("mark", None)
 
 
-    status,data = user.list_notes(length, since, mark)
+    status,data = db.notes_index(username, length, since, mark)
 
     if status == 200:
         return jsonify(**data)
