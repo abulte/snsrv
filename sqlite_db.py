@@ -176,10 +176,74 @@ class Database(DB):
 
 
     def save_version(self, notekey):
-        g.cur.execute('insert into versions select key, modifydate, content, version from notes where key = ?', (notekey,)) 
+        g.cur.execute('insert into versions select key, modifydate, content, version from notes where key = ?', (notekey,))
         g.con.commit()
 
     def drop_old_versions(self, notekey, minversion):
         g.cur.execute('delete from versions where version < ? and key = ?', (minversion, notekey))
         g.con.commit()
+
+
+    def notes_index(self, username, length, since, mark):
+        user = self.get_user(username)
+
+        # set defaults for mark and since
+        if not mark:
+            mark = 0
+        if not since:
+            since = 0
+
+        # limit length to 100
+        if not length:
+            length = 100
+        else:
+            if length < 1:
+                return (400, "length must be greater than 0")
+                return { "count": 0, "data": []} # ha caught you there
+            length = max(length, 100)
+
+            
+        g.cur.execute("select rowid, key, deleted, modifydate, createdate, syncnum, version, minversion, sharekey, publishkey, pinned, markdown, unread, list from notes where userid = ? and rowid > ? and modifydate > ? order by rowid", (user['id'], mark, since))
+        notes = g.cur.fetchall()
+        print(notes)
+
+        newmark = None
+        if len(notes) > length:
+            newmark = notes[length-1]['rowid']
+            notes = notes[:length]
+
+
+        # ok there's probably a more efficient way to process notes here.... 
+        # contributes of code or ideas welcome ;)
+        for note in notes:
+            key = note['key']
+            tagsOBJ = g.cur.execute("select name from tagged join tags on id=tagid where notekey=?", (key,)).fetchall()
+            if tagsOBJ:
+                note['tags'] = [x['name'] for x in tagsOBJ]
+            else:
+                note['tags'] = []
+
+
+            systemtags = [tag for tag in ['pinned', 'markdown', 'unread', 'list'] if note.get(tag, None)]
+            note['systemtags'] = systemtags
+            del note['rowid']
+            del note['pinned']
+            del note['markdown']
+            del note['unread']
+            del note['list']
+
+        data = {}
+        data['count'] = len(notes)
+        data['data'] = notes
+        if newmark:
+            data['mark'] = newmark
+
+        return (200, data)
+        
+
+
+
+
+
+
 

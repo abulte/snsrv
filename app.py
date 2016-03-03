@@ -200,6 +200,7 @@ def get_notes_list(username):
     since = request.args.get("since", None)
     mark = request.args.get("mark", None)
 
+    # TODO: validate length and since before continuing
 
     status,data = db.notes_index(username, length, since, mark)
 
@@ -285,6 +286,7 @@ def web_register():
         </form>
         '''
 
+# i know the built-in row factory is faster, but I want a dictionary.
 def dict_factory(cursor, row):
     d = {}
     for idx, col in enumerate(cursor.description):
