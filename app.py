@@ -16,6 +16,7 @@ import bcrypt
 import random
 import uuid
 import sqlite3
+import re
 
 # TODO: get rid of these
 from notesdb import NotesDB
@@ -28,6 +29,8 @@ from functools import update_wrapper
 
 import db_frontend
 
+RE_int = re.compile(r'\d+') # re to check if string is positive integer (no + prefix allowed)
+RE_float = re.compile(r'\d+(\.\d+|)') # re to check if string is positive float (no + prefix allowed)
 
 def crossdomain(origin=None, methods=None, headers=None,
                 max_age=21600, attach_to_all=True,
@@ -196,13 +199,23 @@ def delete_note(user, notekey):
 def get_notes_list(username):
 
     # all info in the querystring
-    length = request.args.get("length", None)
-    since = request.args.get("since", None)
+    length = request.args.get("length", "100")
+    since = request.args.get("since", "0")
     mark = request.args.get("mark", None)
 
-    # TODO: validate length and since before continuing
+    if RE_int.match(length):
+        length = int(length)
+    else:
+        return Response("invalid length parameter", 400)
 
-    status,data = db.notes_index(username, length, since, mark)
+    if RE_float.match(since):
+        since = float(since)
+    else:
+        return Response("invalid since parameter", 400)
+
+    # note: mark can be anything - leave it to the database to work it out
+
+    data, status = db.notes_index(username, length, since, mark)
 
     if status == 200:
         return jsonify(**data)

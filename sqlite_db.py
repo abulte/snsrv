@@ -4,6 +4,9 @@
 import sqlite3
 import os.path
 import datetime
+import re
+
+RE_int = re.compile(r'\d+') # re to check if string is positive integer (no + prefix allowed)
 
 class DB(object):
     def __init__(self, args):
@@ -187,25 +190,25 @@ class Database(DB):
     def notes_index(self, username, length, since, mark):
         user = self.get_user(username)
 
-        # set defaults for mark and since
+        # set defaults for mark (currently length and since must be valid)
         if not mark:
-            mark = 0
-        if not since:
-            since = 0
-
-        # limit length to 100
-        if not length:
-            length = 100
+            mark = "0"
+        if RE_int.match(mark):
+            mark = int(mark)
         else:
-            if length < 1:
-                return (400, "length must be greater than 0")
-                return { "count": 0, "data": []} # ha caught you there
-            length = max(length, 100)
+            return ("invalid mark parameter", 400)
+
+        print(length)
+        if length < 1:
+            return ("length must be greater than 0", 400)
+            # return { "count": 0, "data": []} # ha caught you there
+        # should throw error if length too large? (nah, let's be nice)
+        length = min(length, 100)
+        print(length)
 
             
         g.cur.execute("select rowid, key, deleted, modifydate, createdate, syncnum, version, minversion, sharekey, publishkey, pinned, markdown, unread, list from notes where userid = ? and rowid > ? and modifydate > ? order by rowid", (user['id'], mark, since))
         notes = g.cur.fetchall()
-        print(notes)
 
         newmark = None
         if len(notes) > length:
@@ -238,7 +241,7 @@ class Database(DB):
         if newmark:
             data['mark'] = newmark
 
-        return (200, data)
+        return (data, 200)
         
 
 

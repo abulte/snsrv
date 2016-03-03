@@ -152,8 +152,9 @@ class Database():
 
 
     def notes_index(self, username, length, since, mark):
-        status, data = self.database.notes_index(username, length, since, mark)
-        return (status, data)
+        """ username<string>, length<int>, since<float>, mark<whatever> """
+        data, status = self.database.notes_index(username, length, since, mark)
+        return (data, status)
 
 
 
