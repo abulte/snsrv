@@ -55,6 +55,7 @@ class Database():
     def update_note(self, username, notekey, data):
         # TODO: check/validate data types 
 
+        # TODO: use syncnum to resolve conflicts (if syncnum in new data is lower, don't use)
         old_note = self.get_note(username, notekey)
         if not old_note:
             return ('note with that key does not exist', 404)

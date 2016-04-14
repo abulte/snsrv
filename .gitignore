@@ -5,3 +5,4 @@ __pycache__
 local
 db
 *.db
+/doc

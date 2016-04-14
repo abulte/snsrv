@@ -121,9 +121,52 @@ def requires_auth(f):
 
 app = Flask(__name__)
 
+# TODO: return json error data instead of string over https
 
+# TODO: complete apidoc comments
+"""
+@apiDefine NoteData
+
+@apiSuccess {String} key the note's unique key
+@apiSuccess {Integer} deleted trash status of the note
+@apiSuccess {Float}   modifydate time in seconds since epoch
+@apiSuccess {Float}   createdate time in seconds since epoch
+@apiSuccess {Array}   tags array of tags on the note
+@apiSuccess {String}  content the text content of the note
+@apiSuccess {Array}   systemtags array of system tags (unread status, pinned, etc.)
+@apiSuccess {Integer} syncnum number used for resolving conflicts
+@apiSuccess {String} sharekey TODO
+@apiSuccess {String} publishkey TODO
+@apiSuccess {Integer} version note version
+@apiSuccess {Integer} minversion minimum note version available
+"""
+
+"""
+@api {get} /api2/data/:notekey Get a note by key
+@apiName GetNote
+@apiGroup Note
+@apiPermission User
+
+@apiParam {String} notekey unique note key
+
+@apiUse NoteData
+"""
+
+"""
+@api {get} /api2/data/:notekey/:version Get a note by key at specified version
+@apiName GetNoteVersion
+@apiGroup Note
+@apiPermission User
+
+@apiParam {String} notekey unique note key
+@apiParam {Integer} version version number
+
+@apiSuccess {String} key the note's unique key
+@apiSuccess {Float}   versiondate time in seconds since epoch when version created
+@apiSuccess {String}  content the text content of the note
+@apiSuccess {Integer} version note version
+"""
 @app.route("/api2/data/<note_id>/<int:version>")
-@app.route("/api2/data/<note_id>")
 @crossdomain(origin='*')
 @requires_auth
 def get_note(username, note_id, version=None):
