@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-# Copyright (c) 2015 Samuel Walladge
+# Copyright (c) 2015-2015 Samuel Walladge
 # Distributed under the terms of the GNU General Public License version 3.
 
 
@@ -17,10 +17,6 @@ import random
 import uuid
 import sqlite3
 import re
-
-# TODO: get rid of these
-from notesdb import NotesDB
-from pymongo import MongoClient
 
 
 from datetime import timedelta
@@ -167,6 +163,7 @@ def create_note(username):
     data = request.get_data().decode(encoding='utf-8')
     if not data:
         return Response("no note data", 400)
+    # TODO: check this behaviour
     if data.lstrip().startswith('%7B'): # someone urlencoded the post data :(
         data = unquote(data)
 
@@ -221,6 +218,8 @@ def get_notes_list(username):
         return jsonify(**data)
     else:
         return Response(data, status)
+
+# TODO: tags api
 
 
 @app.route('/api/login', methods=['POST'])

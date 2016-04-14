@@ -6,29 +6,11 @@ import os.path
 import datetime
 import re
 
+from db import DB
+from flask import g
+
 RE_int = re.compile(r'\d+') # re to check if string is positive integer (no + prefix allowed)
 
-class DB(object):
-    def __init__(self, args):
-        pass
-
-    def get_user(self, email):
-        """ should return a dictionary containing email/username, hashed password, token, token expiry date, id """
-        raise NotImplemented()
-
-    def create_user(self, email, hashed):
-        raise NotImplemented()
-
-    def update_token(self, email, token, tokendate):
-        raise NotImplemented()
-
-    def get_note(self, key, version=None):
-        raise NotImplemented()
-
-    def update_note(self, key, data):
-        raise NotImplemented()
-
-from flask import g
 
 class Database(DB):
     def __init__(self, args):
@@ -61,7 +43,6 @@ class Database(DB):
         return True
 
     def update_token(self, email, token, tokendate):
-        print(email, token, tokendate)
         g.cur.execute("update users set token = ?, tokendate = ? where email = ?", (token, tokendate, email))
         g.con.commit()
 
@@ -77,7 +58,6 @@ class Database(DB):
 
         # below also means getting latest version will return full note
         if note and version and version != note['version']:
-            # TODO: implement
             g.cur.execute("select * from versions where key = ? and version = ?", (key, version))
             note = g.cur.fetchone()
             return note
@@ -91,7 +71,12 @@ class Database(DB):
 
         systemtags = [tag for tag in ['pinned', 'markdown', 'unread', 'list'] if note.get(tag, None)]
         note['systemtags'] = systemtags
-        # TODO: remove markdown, list, etc. keys from note dict (they should only be in systemtags)
+
+        # remove unnecessary keys
+        del note['pinned']
+        del note['markdown']
+        del note['unread']
+        del note['list']
 
         return note
 
@@ -130,14 +115,17 @@ class Database(DB):
     # TODO: don't forget index for tag is stored in sql as _index
 
 
-    def update_note(self, note_data):
+    def update_note(self, email, note_data):
         # note - note_data contains key
+        user = self.get_user(email)
+
+        note_data['userid'] = user['id']
 
         sys_tags = note_data['systemtags']
         for t in ['pinned', 'markdown', 'list']:
             note_data[t] = 1 if t in sys_tags else 0
 
-        g.cur.execute("update notes set deleted=:deleted, modifydate=:modifydate, createdate=:createdate, syncnum=:syncnum, minversion=:minversion, publishkey=:publishkey, content=:content, version=:version, pinned=:pinned, markdown=:markdown, list=:list where key = :key", note_data)
+        g.cur.execute("update notes set deleted=:deleted, modifydate=:modifydate, createdate=:createdate, syncnum=:syncnum, minversion=:minversion, publishkey=:publishkey, content=:content, version=:version, pinned=:pinned, markdown=:markdown, list=:list where key = :key and userid = :userid", note_data)
 
         key = note_data['key']
         for t in note_data['tags']:
@@ -148,13 +136,13 @@ class Database(DB):
         return True
 
 
-    def delete_note(self, username, key):
+    def delete_note(self, email, key):
         # check user owns note
         # delete all tagged entries associated
         # delete all versions with same key
         # delete note by key
 
-        user = self.get_user(username)
+        user = self.get_user(email)
 
         # 'and userid =' is to ensure note is owned by user
         g.cur.execute("select * from notes where key = ? and userid = ?", (key, user['id']))
@@ -178,11 +166,14 @@ class Database(DB):
 
 
 
-    def save_version(self, notekey):
-        g.cur.execute('insert into versions select key, modifydate, content, version from notes where key = ?', (notekey,))
+    def save_version(self, email, notekey):
+        user = self.get_user(email)
+
+        g.cur.execute('insert into versions select key, modifydate, content, version from notes where key = ? and userid = ?', (notekey, user['id']))
         g.con.commit()
 
-    def drop_old_versions(self, notekey, minversion):
+    def drop_old_versions(self, email, notekey, minversion):
+        print(g.cur.execute('select * from versions').fetchall())
         g.cur.execute('delete from versions where version < ? and key = ?', (minversion, notekey))
         g.con.commit()
 
@@ -198,13 +189,11 @@ class Database(DB):
         else:
             return ("invalid mark parameter", 400)
 
-        print(length)
         if length < 1:
             return ("length must be greater than 0", 400)
             # return { "count": 0, "data": []} # ha caught you there
         # should throw error if length too large? (nah, let's be nice)
         length = min(length, 100)
-        print(length)
 
             
         g.cur.execute("select rowid, key, deleted, modifydate, createdate, syncnum, version, minversion, sharekey, publishkey, pinned, markdown, unread, list from notes where userid = ? and rowid > ? and modifydate > ? order by rowid", (user['id'], mark, since))

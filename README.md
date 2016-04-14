@@ -1,18 +1,20 @@
 
 # snsrv
 
-An attempt to create a [Simplenote](http://simplenote.com/) compatible api and self hosted notes server.
+A [Simplenote](http://simplenote.com/) compatible api and self hosted notes server.
 
 ## WARNING
 
-This is currently under heavy development and is likely to be not working at all in its current state. (working on database backends right now)
+This is currently under heavy development and not all features are implemented yet.
 
 
 ## features
 
 - aims to be 100% compatible with the simplenote third party api (this means you should be able to point your simplenote client to the address of this server and it will work out of the box)
 - multiuser, secure, etc...
-- scalable with mongodb (maybe - at least sqlite3, but ability to add more db backends), and flask structure
+- selfhosted!!
+- scalable with flask structure and options for implemented database backend with scalable databases (currently only sqlite3 backend implemented)
+- web interface (TODO)
 
 ## dependencies 
 
@@ -20,39 +22,41 @@ The following software and libraries are used:
 
 - python3
 - python-flask
-- python-urllib
 - python-bcrypt
-- python-jinja
-
-(optional - for sqlite backend)
-
 - python-sqlite
 
+These can be installed with your package manager, or with pip once python is installed.
 
-(optional - for mongodb backend) 
 
-- python-pymongo
-- mongodb
+## running
 
+For running/testing with the flask dev server, you can simply do the following:
+
+1. clone the repo
+
+2. edit config.py to suit
+
+3. install deps and run!
+
+```
+pyvenv env
+source env/bin/activate
+pip install -r requirements.txt
+python app.py
+```
 
 ## TODO/ROADMAP
 
-- [INPROGRESS] complete and stabilize a database backend
-- [TODO] sanitize data on update and create, etc.
-- [TODO] implement complete api (aiming for simplenote api v2.1.3)
+- [ALMOST] complete and stabilize a database backend 
+           (almost complete using sqlite3 - probably not very well optimised though)
+- [ALMOST] sanitize data on update and create, etc.
+- [ALMOST - just tags api to go] implement complete api (aiming for simplenote api v2.1.3)
 - [TODO] implement note sharing
-- [TODO] more testing of api!
+- [TODO] more testing of api! (now fairly stable based on testing with [sncli](https://github.com/swalladge/sncli))
 - [TODO] document the api
 - [TODO] web interface for managing users
 - [TODO] full web interface for interacting with notes
 
-## running
-
-Currently tested like this:
-
-- clone the repository
-- edit config.py to your liking
-- `$ python app.py` for the development server 
 
 ## contributing
 
@@ -81,4 +85,4 @@ See `swagger.yaml` for the api documentation - can be viewed using a [swagger](h
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-Copyright © 2016 Samuel Walladge
+Copyright © 2015-2016 Samuel Walladge

@@ -37,7 +37,7 @@ create table if not exists notes
 
 create table if not exists versions
 (
-  key integer not null,
+  key text not null,
   versiondate numeric, -- seconds since epoch
   content text,
   version integer not null,

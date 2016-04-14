@@ -76,7 +76,7 @@ class Database():
 
         old_note['minversion'] = max(old_note['version'] - 20, 1)  #TODO: allow configuring number of versions to keep
 
-        self.database.drop_old_versions(notekey, old_note['minversion'])
+        self.database.drop_old_versions(username, notekey, old_note['minversion'])
 
         # TODO: handling sharekey?
 
@@ -100,7 +100,7 @@ class Database():
 
         old_note['syncnum'] += 1
 
-        ok = self.database.update_note(copy.deepcopy(old_note))
+        ok = self.database.update_note(username, copy.deepcopy(old_note))
         if ok:
             return (old_note, 200)
         return ('unable to create note', 400)
@@ -156,6 +156,7 @@ class Database():
         data, status = self.database.notes_index(username, length, since, mark)
         return (data, status)
 
+    # TODO: tags api
 
 
 
