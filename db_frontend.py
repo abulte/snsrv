@@ -29,7 +29,7 @@ class Database():
 
     def check_token(self, username, token):
         user = self.get_user(username)
-        if user['token'] and user['token'] == token:
+        if user and user.get('token') and user['token'] == token:
             return True
         return False
 
@@ -53,7 +53,7 @@ class Database():
         return note
 
     def update_note(self, username, notekey, data):
-        # TODO: check/validate data types 
+        # TODO: check/validate data types
 
         # TODO: use syncnum to resolve conflicts (if syncnum in new data is lower, don't use)
         old_note = self.get_note(username, notekey)
@@ -140,12 +140,12 @@ class Database():
                 tags.append(safe_tag)
         note_data['tags'] = tags
 
-        
+
         ok = self.database.create_note(username, copy.deepcopy(note_data))
         if ok:
             return (note_data, True)
         return ('unable to create note', False)
-        
+
 
     def delete_note(self, username, key):
         data = self.database.delete_note(username, key)
@@ -171,9 +171,9 @@ class Database():
             return None
 
         return t
-            
-        
 
 
 
-    
+
+
+
