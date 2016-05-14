@@ -8,6 +8,7 @@ import os
 from flask import Flask, request, Response, jsonify, \
         session, redirect, url_for, render_template, escape, \
         flash, g
+from flask.ext.cors import CORS
 from functools import wraps
 from urllib.parse import parse_qs, quote, unquote
 import base64
@@ -27,47 +28,6 @@ import db_frontend
 
 RE_int = re.compile(r'\d+') # re to check if string is positive integer (no + prefix allowed)
 RE_float = re.compile(r'\d+(\.\d+|)') # re to check if string is positive float (no + prefix allowed)
-
-def crossdomain(origin=None, methods=None, headers=None,
-                max_age=21600, attach_to_all=True,
-                automatic_options=True):
-    if methods is not None:
-        methods = ', '.join(sorted(x.upper() for x in methods))
-    if headers is not None and not isinstance(headers, str):
-        headers = ', '.join(x.upper() for x in headers)
-    if not isinstance(origin, str):
-        origin = ', '.join(origin)
-    if isinstance(max_age, timedelta):
-        max_age = max_age.total_seconds()
-
-    def get_methods():
-        if methods is not None:
-            return methods
-
-        options_resp = current_app.make_default_options_response()
-        return options_resp.headers['allow']
-
-    def decorator(f):
-        def wrapped_function(*args, **kwargs):
-            if automatic_options and request.method == 'OPTIONS':
-                resp = current_app.make_default_options_response()
-            else:
-                resp = make_response(f(*args, **kwargs))
-            if not attach_to_all and request.method != 'OPTIONS':
-                return resp
-
-            h = resp.headers
-
-            h['Access-Control-Allow-Origin'] = origin
-            h['Access-Control-Allow-Methods'] = get_methods()
-            h['Access-Control-Max-Age'] = str(max_age)
-            if headers is not None:
-                h['Access-Control-Allow-Headers'] = headers
-            return resp
-
-        f.provide_automatic_options = False
-        return update_wrapper(wrapped_function, f)
-    return decorator
 
 
 def check_auth(username, password):
@@ -120,6 +80,7 @@ def requires_auth(f):
 
 
 app = Flask(__name__)
+CORS(app)
 
 # TODO: return json error data instead of string over https
 
@@ -168,7 +129,6 @@ app = Flask(__name__)
 """
 @app.route("/api2/data/<note_id>")
 @app.route("/api2/data/<note_id>/<int:version>")
-@crossdomain(origin='*')
 @requires_auth
 def get_note(username, note_id, version=None):
     db = app.config.get('database')
@@ -180,7 +140,6 @@ def get_note(username, note_id, version=None):
 
 
 @app.route("/api2/data/<note_id>", methods=['POST'])
-@crossdomain(origin='*')
 @requires_auth
 def update_note(username, note_id):
     data = request.get_data().decode(encoding='utf-8')
@@ -201,7 +160,6 @@ def update_note(username, note_id):
 
 
 @app.route("/api2/data", methods=['POST'])
-@crossdomain(origin='*')
 @requires_auth
 def create_note(username):
     data = request.get_data().decode(encoding='utf-8')
@@ -225,7 +183,6 @@ def create_note(username):
 
 
 @app.route("/api2/data/<notekey>", methods=['DELETE'])
-@crossdomain(origin='*')
 @requires_auth
 def delete_note(user, notekey):
     message, status = db.delete_note(user, notekey)
@@ -235,7 +192,6 @@ def delete_note(user, notekey):
 
 
 @app.route("/api2/index")
-@crossdomain(origin='*')
 @requires_auth
 def get_notes_list(username):
 
@@ -267,7 +223,6 @@ def get_notes_list(username):
 
 
 @app.route('/api/login', methods=['POST'])
-@crossdomain(origin='*')
 def login():
 
     # email and password given in querystring format in post data urlencoded then base64 encoded
