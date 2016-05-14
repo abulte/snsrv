@@ -3,31 +3,38 @@
 # Copyright (c) 2015-2015 Samuel Walladge
 # Distributed under the terms of the GNU General Public License version 3.
 
-
 import os
-from flask import Flask, request, Response, jsonify, \
-        session, redirect, url_for, render_template, escape, \
-        flash, g
-from flask.ext.cors import CORS
-from functools import wraps
-from urllib.parse import parse_qs, quote, unquote
-import base64
-import json
-import bcrypt
-import random
-import uuid
-import sqlite3
 import re
+import json
+import base64
+import bcrypt
+import sqlite3
+from functools import wraps
+from urllib.parse import parse_qs, unquote
 
+from flask import (
+    Flask,
+    request,
+    Response,
+    jsonify,
+    session,
+    redirect,
+    url_for,
+    render_template,
+    flash,
+    g,
+    make_response,
+    current_app
+)
 
-from datetime import timedelta
-from flask import make_response, request, current_app
-from functools import update_wrapper
+from flask.ext.cors import CORS
 
 import db_frontend
 
-RE_int = re.compile(r'\d+') # re to check if string is positive integer (no + prefix allowed)
-RE_float = re.compile(r'\d+(\.\d+|)') # re to check if string is positive float (no + prefix allowed)
+# re to check if string is positive integer (no + prefix allowed)
+RE_INT = re.compile(r'\d+')
+# re to check if string is positive float (no + prefix allowed)
+RE_FLOAT = re.compile(r'\d+(\.\d+|)')
 
 
 def check_auth(username, password):
@@ -39,13 +46,14 @@ def check_auth(username, password):
 
     user = db.get_user(username)
     if not user:
-        return False # username doesn't exist
+        return False  # username doesn't exist
 
     # check if equal to password in database
     if bcrypt.hashpw(password.encode(), user['hashed']) == user['hashed']:
         return True
 
     return False
+
 
 def create_user(username, password):
     """ function to create a new user in the db - should also validate"""
@@ -60,19 +68,18 @@ def create_user(username, password):
     return ("", status)
 
 
-def requires_auth(f):
-    @wraps(f)
+def requires_auth(func):
+    @wraps(func)
     def decorated(*args, **kwargs):
-        token = request.args.get("auth",None)
-        username = request.args.get("email",None)
+        token = request.args.get("auth", None)
+        username = request.args.get("email", None)
 
         # check for existance
         if not username or not token:
             return Response("missing credentials", 401)
 
-        ok = db.check_token(username, token)
-        if ok:
-            return f(username, *args, **kwargs)
+        if db.check_token(username, token):
+            return func(username, *args, **kwargs)
 
         return Response("invalid credentials", 401)
 
@@ -134,7 +141,7 @@ def get_note(username, note_id, version=None):
     db = app.config.get('database')
     note = db.get_note(username, note_id, version)
     if note is None:
-        return Response("Cannot get: note not found",404)
+        return Response("Cannot get: note not found", 404)
 
     return jsonify(**note)
 
@@ -144,7 +151,7 @@ def get_note(username, note_id, version=None):
 def update_note(username, note_id):
     data = request.get_data().decode(encoding='utf-8')
     # not sure if need this
-    if data.lstrip().startswith('%7B'): # someone urlencoded the post data :(
+    if data.lstrip().startswith('%7B'):  # someone urlencoded the post data :(
         data = unquote(data)
 
     try:
@@ -166,7 +173,7 @@ def create_note(username):
     if not data:
         return Response("no note data", 400)
     # TODO: check this behaviour
-    if data.lstrip().startswith('%7B'): # someone urlencoded the post data :(
+    if data.lstrip().startswith('%7B'):  # someone urlencoded the post data :(
         data = unquote(data)
 
     try:
@@ -181,14 +188,12 @@ def create_note(username):
     return Response(data, 400)
 
 
-
 @app.route("/api2/data/<notekey>", methods=['DELETE'])
 @requires_auth
 def delete_note(user, notekey):
     message, status = db.delete_note(user, notekey)
 
     return Response(message, status)
-
 
 
 @app.route("/api2/index")
@@ -200,12 +205,12 @@ def get_notes_list(username):
     since = request.args.get("since", "0")
     mark = request.args.get("mark", None)
 
-    if RE_int.match(length):
+    if RE_INT.match(length):
         length = int(length)
     else:
         return Response("invalid length parameter", 400)
 
-    if RE_float.match(since):
+    if RE_FLOAT.match(since):
         since = float(since)
     else:
         return Response("invalid since parameter", 400)
@@ -240,12 +245,14 @@ def login():
 
     return Response("invalid credentials", 401)
 
+
 @app.route('/')
 def web_index():
     loggedin = False
     if 'username' in session:
         loggedin = True
     return render_template('index.html', username=session.get('username', None), loggedin=loggedin)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def web_login():
@@ -271,13 +278,14 @@ def web_logout():
         flash("You have been logged out.")
     return redirect(url_for('web_index'))
 
+
 @app.route('/register', methods=['GET', 'POST'])
 def web_register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        message, ok = create_user(username, password)
-        if ok:
+        message, status = create_user(username, password)
+        if status:
             return redirect('/login')
 
         return '''
@@ -297,20 +305,23 @@ def web_register():
         </form>
         '''
 
+
 # i know the built-in row factory is faster, but I want a dictionary.
 def dict_factory(cursor, row):
-    d = {}
+    mydict = {}
     for idx, col in enumerate(cursor.description):
-        d[col[0]] = row[idx]
-    return d
+        mydict[col[0]] = row[idx]
+    return mydict
+
 
 # needed for setup of connections for sqlite database (otherwise get threading issues)
 @app.before_request
 def before_request():
     if app.config.get('DB_TYPE') == 'sqlite_db':
         g.con = sqlite3.connect(app.config.get('DB_OPTIONS').get('FILE'))
-        g.con.row_factory = dict_factory # so returns dictionary of stuff, rather than tuples
+        g.con.row_factory = dict_factory  # so returns dictionary of stuff, rather than tuples
         g.cur = g.con.cursor()
+
 
 @app.teardown_request
 def teardown_request(exception):
@@ -325,11 +336,10 @@ if __name__ == '__main__':
     if os.environ.get('FLASK_SIMPLENOTE_SRV'):
         app.config.from_envvar('FLASK_SIMPLENOTE_SRV')
 
+    DB_TYPE = app.config.get('DB_TYPE')
+    DB_OPTIONS = app.config.get('DB_OPTIONS')
 
-    db_type = app.config.get('DB_TYPE')
-    options = app.config.get('DB_OPTIONS')
-
-    backend = __import__(db_type).Database(options)
+    backend = __import__(DB_TYPE).Database(DB_OPTIONS)
     backend.first_run()
 
     global db
@@ -339,8 +349,9 @@ if __name__ == '__main__':
     app.secret_key = app.config.get('SECRET_KEY')
 
     app.run(
-            host=app.config.get('SERVER_BIND'),
-            port=app.config.get('SERVER_PORT'),
-           # ssl_context = ... better to run this under another web server (eg. nginx or apache) instead of this dev server
-            debug = True
-            )
+        host=app.config.get('SERVER_BIND'),
+        port=app.config.get('SERVER_PORT'),
+        # ssl_context = ... better to run this under another web server
+        #   (eg. nginx or apache) instead of this dev server
+        debug=True
+    )
