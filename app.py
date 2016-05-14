@@ -166,6 +166,7 @@ app = Flask(__name__)
 @apiSuccess {String}  content the text content of the note
 @apiSuccess {Integer} version note version
 """
+@app.route("/api2/data/<note_id>")
 @app.route("/api2/data/<note_id>/<int:version>")
 @crossdomain(origin='*')
 @requires_auth
@@ -230,7 +231,7 @@ def delete_note(user, notekey):
     message, status = db.delete_note(user, notekey)
 
     return Response(message, status)
-    
+
 
 
 @app.route("/api2/index")
@@ -278,9 +279,9 @@ def login():
         password = unquote(credentials["password"][0])
     else:
         return Response("invalid or missing credentials", 401)
-    
+
     if check_auth(email, password):
-        return db.get_token(email) 
+        return db.get_token(email)
 
     return Response("invalid credentials", 401)
 
@@ -296,7 +297,7 @@ def web_login():
     if request.method == 'POST':
         username = request.form['username']
         if not check_auth(username, request.form['password']):
-            return render_template('login.html', error='Invalid credentials') 
+            return render_template('login.html', error='Invalid credentials')
 
         # ok, we're authed, lets set username session
         session['username'] = request.form['username']
@@ -305,7 +306,7 @@ def web_login():
     if 'username' in session:
         flash("You are logged in!")
         return redirect(url_for('web_index'))
-    return render_template('login.html', error=None) 
+    return render_template('login.html', error=None)
 
 
 @app.route('/logout')
