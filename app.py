@@ -44,7 +44,7 @@ def check_auth(username, password):
     """
     # TODO: maybe this should be done in db_frontend?
 
-    user = db.get_user(username)
+    user = app.config['database'].get_user(username)
     if not user:
         return False  # username doesn't exist
 
@@ -64,7 +64,7 @@ def create_user(username, password):
     if len(username) < 1 or len(username) > 40:
         return ("username invalid length", False)
 
-    status = db.create_user(username, bcrypt.hashpw(password.encode(), bcrypt.gensalt()))
+    status = app.config['database'].create_user(username, bcrypt.hashpw(password.encode(), bcrypt.gensalt()))
     return ("", status)
 
 
@@ -78,7 +78,7 @@ def requires_auth(func):
         if not username or not token:
             return Response("missing credentials", 401)
 
-        if db.check_token(username, token):
+        if app.config['database'].check_token(username, token):
             return func(username, *args, **kwargs)
 
         return Response("invalid credentials", 401)
@@ -181,7 +181,7 @@ def create_note(username):
     except ValueError:
         return Response("invalid json data", 400)
 
-    data, ok = db.create_note(username, data)
+    data, ok = app.config['database'].create_note(username, data)
 
     if ok:
         return jsonify(**data)
@@ -217,7 +217,7 @@ def get_notes_list(username):
 
     # note: mark can be anything - leave it to the database to work it out
 
-    data, status = db.notes_index(username, length, since, mark)
+    data, status = app.config['database'].notes_index(username, length, since, mark)
 
     if status == 200:
         return jsonify(**data)
@@ -232,7 +232,7 @@ def login():
 
     # email and password given in querystring format in post data urlencoded then base64 encoded
     data = request.get_data()
-    credentials = parse_qs(base64.decodestring(data).decode(encoding='UTF-8'))
+    credentials = parse_qs(base64.decodebytes(data).decode(encoding='UTF-8'))
 
     if "email" in credentials and "password" in credentials:
         email = unquote(credentials["email"][0])
@@ -241,7 +241,7 @@ def login():
         return Response("invalid or missing credentials", 401)
 
     if check_auth(email, password):
-        return db.get_token(email)
+        return app.config['database'].get_token(email)
 
     return Response("invalid credentials", 401)
 
@@ -342,7 +342,6 @@ if __name__ == '__main__':
     backend = __import__(DB_TYPE).Database(DB_OPTIONS)
     backend.first_run()
 
-    global db
     db = db_frontend.Database(backend)
     app.config['database'] = db
 
