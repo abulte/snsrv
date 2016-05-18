@@ -36,6 +36,25 @@ RE_INT = re.compile(r'\d+')
 # re to check if string is positive float (no + prefix allowed)
 RE_FLOAT = re.compile(r'\d+(\.\d+|)')
 
+app = Flask(__name__)
+CORS(app)
+
+app.config.from_object('config')
+
+if os.environ.get('FLASK_SIMPLENOTE_SRV'):
+    app.config.from_envvar('FLASK_SIMPLENOTE_SRV')
+
+DB_TYPE = app.config.get('DB_TYPE')
+DB_OPTIONS = app.config.get('DB_OPTIONS')
+
+backend = __import__(DB_TYPE).Database(DB_OPTIONS)
+backend.first_run()
+
+db = db_frontend.Database(backend)
+app.config['database'] = db
+
+app.secret_key = app.config.get('SECRET_KEY')
+
 
 def check_auth(username, password):
     """This function is called to check if a username /
@@ -85,9 +104,6 @@ def requires_auth(func):
 
     return decorated
 
-
-app = Flask(__name__)
-CORS(app)
 
 # TODO: return json error data instead of string over https
 
@@ -329,24 +345,7 @@ def teardown_request(exception):
         if hasattr(g, 'db'):
             g.con.close()
 
-
 if __name__ == '__main__':
-    app.config.from_object('config')
-
-    if os.environ.get('FLASK_SIMPLENOTE_SRV'):
-        app.config.from_envvar('FLASK_SIMPLENOTE_SRV')
-
-    DB_TYPE = app.config.get('DB_TYPE')
-    DB_OPTIONS = app.config.get('DB_OPTIONS')
-
-    backend = __import__(DB_TYPE).Database(DB_OPTIONS)
-    backend.first_run()
-
-    db = db_frontend.Database(backend)
-    app.config['database'] = db
-
-    app.secret_key = app.config.get('SECRET_KEY')
-
     app.run(
         host=app.config.get('SERVER_BIND'),
         port=app.config.get('SERVER_PORT'),

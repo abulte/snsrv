@@ -16,6 +16,7 @@ class Database(DB):
     def __init__(self, args):
         super(Database, self).__init__(args)
         self.filename = args['FILE']
+        self.init_file = args['INIT_SQL_FILE']
         # database setup by flask - use:
         #   g.con == connection object
         #   g.cur == cursor
@@ -23,7 +24,7 @@ class Database(DB):
     def first_run(self):
         con = sqlite3.connect(self.filename)
         cur = con.cursor()
-        init_sql_file = open('init.sql')
+        init_sql_file = open(self.init_file)
         cur.executescript(init_sql_file.read())
         init_sql_file.close()
         con.commit()

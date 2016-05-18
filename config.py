@@ -4,7 +4,7 @@
 
 # server bind address
 # 0.0.0.0 allows connections from anywhere
-SERVER_BIND = '0.0.0.0' 
+SERVER_BIND = '0.0.0.0'
 
 # and port
 SERVER_PORT = 5000
@@ -21,8 +21,10 @@ DB_TYPE = 'sqlite_db'
 # options to pass to the db backend
 # below for sqlite
 DB_OPTIONS = {
-        'FILE': 'sqlite.db'
-        }
+    'FILE': 'sqlite.db',
+    'INIT_SQL_FILE': 'init.sql'
+}
+
 ## example for mongodb
 # DB_OPTIONS = {
 #         'HOST': 'localhost',
