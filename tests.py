@@ -9,7 +9,7 @@ from sqlite_db import Database
 from db_frontend import Database as DBFrontend
 
 
-class FlaskrTestCase(unittest.TestCase):
+class SNSRVTestCase(unittest.TestCase):
 
     def setUp(self):
         self.username = 'user'
