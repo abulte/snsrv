@@ -178,6 +178,44 @@ class SNSRVTestCase(unittest.TestCase):
         data = json.loads(response.get_data(as_text=True))
         self.assertEqual(data['content'], 'foobar')
 
+    def test_get_note_detail_w_version(self):
+
+        self._login()
+        response = self._create_note()
+        data = json.loads(response.get_data(as_text=True))
+        note_id = data['key']
+
+        # get version #1
+        response = self.app.get(self._get_authentified_url('/api2/data/%s/1' % note_id))
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.get_data(as_text=True))
+        self.assertEqual(data['content'], 'foobar')
+
+        # create version #2
+        data = json.dumps({
+            'content': 'new content'
+        })
+        response = self.app.post(self._get_authentified_url('/api2/data/%s' % note_id), data=data)
+        data = json.loads(response.get_data(as_text=True))
+        self.assertEqual(data['version'], 2)
+        self.assertEqual(data['content'], 'new content')
+
+        # get version 2 details
+        response = self.app.get(self._get_authentified_url('/api2/data/%s/2' % note_id))
+        data = json.loads(response.get_data(as_text=True))
+        self.assertEqual(data['content'], 'new content')
+
+        # get version 1 again
+        response = self.app.get(self._get_authentified_url('/api2/data/%s/1' % note_id))
+        data = json.loads(response.get_data(as_text=True))
+        self.assertEqual(data['content'], 'foobar')
+
+        # get latest version (should be 2)
+        response = self.app.get(self._get_authentified_url('/api2/data/%s' % note_id))
+        data = json.loads(response.get_data(as_text=True))
+        self.assertEqual(data['content'], 'new content')
+
     def test_get_note_detail_wrong_id(self):
 
         self._login()
