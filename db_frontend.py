@@ -63,7 +63,7 @@ class Database():
         content =  data.get('content', None)
         if content and content != old_note['content']:
             # then save old version
-            self.database.save_version(notekey)
+            self.database.save_version(username, notekey)
             old_note['content'] = content
             # TODO: currently version only increments when content changes (is this wanted?) - either way, syncnum is inc'd
             old_note['version'] += 1

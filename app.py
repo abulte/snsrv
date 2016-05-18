@@ -159,7 +159,7 @@ def update_note(username, note_id):
     except ValueError:
         return Response("invalid json data", 400)
 
-    data, status = db.update_note(username, note_id, data)
+    data, status = app.config['database'].update_note(username, note_id, data)
 
     if status == 200:
         return jsonify(**data)
@@ -191,7 +191,7 @@ def create_note(username):
 @app.route("/api2/data/<notekey>", methods=['DELETE'])
 @requires_auth
 def delete_note(user, notekey):
-    message, status = db.delete_note(user, notekey)
+    message, status = app.config['database'].delete_note(user, notekey)
 
     return Response(message, status)
 

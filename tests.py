@@ -28,11 +28,11 @@ class FlaskrTestCase(unittest.TestCase):
         app.config['database'] = DBFrontend(backend)
         app.config['DB_TYPE'] = 'sqlite_db'
         app.config['DB_OPTIONS'] = db_options
-
+        app.config['SECRET_KEY'] = 'secret'
         app.config['TESTING'] = True
         self.app = app.test_client()
 
-        self._create_user()
+        self._register()
 
     def tearDown(self):
         os.close(self.db_fd)
@@ -41,7 +41,7 @@ class FlaskrTestCase(unittest.TestCase):
     def _get_authentified_url(self, url):
         return '%s?email=%s&auth=%s' % (url, self.username, self.token)
 
-    def _create_user(self, user=None, password=None):
+    def _register(self, user=None, password=None):
         """Create test user
 
         Use the endpoint instead of direct DB call because of
@@ -77,19 +77,19 @@ class FlaskrTestCase(unittest.TestCase):
 
         return response
 
-    def test_create_user(self):
+    def test_register(self):
 
-        response = self._create_user(user='anotheruser')
+        response = self._register(user='anotheruser')
         self.assertIn('Redirecting...', response.get_data(as_text=True))
 
-    def test_create_user_wrong_pw_len(self):
+    def test_register_wrong_pw_len(self):
 
-        response = self._create_user(user='anotheruser', password='123')
+        response = self._register(user='anotheruser', password='123')
         self.assertIn('password must 8 or more characters', response.get_data(as_text=True))
 
-    def test_create_user_with_existing_username(self):
+    def test_register_with_existing_username(self):
 
-        response = self._create_user()
+        response = self._register()
         self.assertIn('Try again!', response.get_data(as_text=True))
 
     def test_protected_page_with_wrong_username(self):
@@ -108,11 +108,6 @@ class FlaskrTestCase(unittest.TestCase):
 
         response = self.app.get('/api2/index')
         self.assertIn('missing credentials', response.get_data(as_text=True))
-
-    def test_index_page(self):
-        """Index is giving us something"""
-        response = self.app.get('/')
-        self.assertTrue('Welcome to SNSRV!' in response.get_data(as_text=True))
 
     def test_login(self):
 
@@ -190,6 +185,93 @@ class FlaskrTestCase(unittest.TestCase):
         response = self.app.get(self._get_authentified_url('/api2/data/%s' % note_id))
 
         self.assertEqual(response.status_code, 404)
+
+    def test_update_note(self):
+
+        self._login()
+
+        response = self._create_note()
+        data = json.loads(response.get_data(as_text=True))
+        note_id = data['key']
+
+        data = json.dumps({
+            'content': 'new content'
+        })
+
+        response = self.app.post(self._get_authentified_url('/api2/data/%s' % note_id), data=data)
+        self.assertEqual(response.status_code, 200)
+
+        response = self.app.get(self._get_authentified_url('/api2/data/%s' % note_id))
+
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.get_data(as_text=True))
+        self.assertEqual(data['content'], 'new content')
+
+    def test_delete_note_wo_trash(self):
+
+        self._login()
+
+        response = self._create_note()
+        data = json.loads(response.get_data(as_text=True))
+        note_id = data['key']
+
+        response = self.app.delete(self._get_authentified_url('/api2/data/%s' % note_id))
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_data(as_text=True),
+            'must send note to trash before permanently deleting'
+        )
+
+    def test_delete_note(self):
+
+        self._login()
+
+        response = self._create_note()
+        data = json.loads(response.get_data(as_text=True))
+        note_id = data['key']
+
+        # move to trash
+        data = json.dumps({
+            'deleted': 1
+        })
+        response = self.app.post(self._get_authentified_url('/api2/data/%s' % note_id), data=data)
+        self.assertEqual(response.status_code, 200)
+
+        # delete
+        response = self.app.delete(self._get_authentified_url('/api2/data/%s' % note_id))
+        self.assertEqual(response.status_code, 200)
+
+        # verify list is empty
+        response = self.app.get(self._get_authentified_url('/api2/index'))
+        data = json.loads(response.get_data(as_text=True))
+        self.assertEqual(data, {
+            'count': 0,
+            'data': []
+        })
+
+    def test_index_page(self):
+        """Index is giving us something"""
+        response = self.app.get('/')
+        self.assertTrue('Welcome to SNSRV!' in response.get_data(as_text=True))
+
+    def test_web_login(self):
+
+        response = self.app.post('/login', data=dict(
+            username=self.username,
+            password=self.password
+        ), follow_redirects=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('logout', response.get_data(as_text=True))
+
+    def test_web_logout(self):
+
+        self.test_web_login()
+        response = self.app.get('/logout', follow_redirects=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('login', response.get_data(as_text=True))
 
 
 if __name__ == '__main__':
