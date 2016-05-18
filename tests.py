@@ -19,7 +19,8 @@ class SNSRVTestCase(unittest.TestCase):
         self.db_fd, self.db_file_path = tempfile.mkstemp()
 
         db_options = {
-            'FILE': self.db_file_path
+            'FILE': self.db_file_path,
+            'INIT_SQL_FILE': 'init.sql'
         }
 
         backend = Database(db_options)
